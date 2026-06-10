@@ -4,10 +4,66 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Your Code Review Assistant — Options</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        max-width: 560px; margin: 40px auto; padding: 0 20px; color: #1f2328;
+      }
+      h1 { font-size: 20px; margin-bottom: 4px; }
+      .field { margin: 18px 0; }
+      label { display: block; font-weight: 600; margin-bottom: 6px; }
+      select, input[type="password"], input[type="text"] {
+        width: 100%; padding: 8px; border: 1px solid #d0d7de; border-radius: 6px;
+        font: inherit; box-sizing: border-box;
+      }
+      .hint { font-size: 12px; color: #57606a; margin-top: 4px; }
+      .field.dimmed { opacity: 0.5; }
+      .notice {
+        background: #fff8c5; border: 1px solid rgba(212, 167, 44, 0.4);
+        border-radius: 6px; padding: 10px 12px; font-size: 12px; margin: 20px 0;
+      }
+      .status { font-size: 12px; color: #1a7f37; min-height: 18px; font-weight: 600; }
+    </style>
   </head>
   <body>
     <h1>Your Code Review Assistant</h1>
-    <p>Settings UI lands in task #13.</p>
+    <p class="hint">
+      Settings are stored locally in this browser (chrome.storage.local) and are not
+      encrypted at rest.
+    </p>
+
+    <div class="field">
+      <label for="provider">AI backend</label>
+      <select id="provider">
+        <option value="anthropic-api">Anthropic API (your API key)</option>
+        <option value="claude-code-cli">Claude Code CLI (your subscription, via native host)</option>
+      </select>
+      <div class="hint">If the selected backend isn't available, the other is used as a fallback.</div>
+    </div>
+
+    <div class="field" id="apiKeyField">
+      <label for="apiKey">Anthropic API key</label>
+      <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
+      <div class="hint">Used for the Anthropic API backend. Stored locally; never synced across machines.</div>
+    </div>
+
+    <div class="field">
+      <label for="model">Model</label>
+      <select id="model">
+        <option value="claude-opus-4-8">Claude Opus 4.8 — most capable</option>
+        <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — faster, cheaper</option>
+        <option value="claude-haiku-4-5">Claude Haiku 4.5 — fastest</option>
+      </select>
+    </div>
+
+    <div class="notice">
+      ⚠️ Highlighted code is sent to Anthropic to answer your questions. Don't use it on
+      code you aren't permitted to share externally.
+    </div>
+
+    <div class="status" id="status"></div>
+
     <script type="module" src="./options.ts"></script>
   </body>
 </html>
