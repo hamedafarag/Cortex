@@ -305,7 +305,14 @@ YourCodeReviewAssistant/
 ## 14. Open questions / risks
 
 - **GitHub DOM fragility** — mitigated by using the GitHub API for ground-truth content;
-  DOM only for selection capture.
+  DOM only for selection capture. Verified signals on the new `/changes` view:
+  file path via `aria-label="Diff for: <path>"`, line via `data-line-number`.
+- **No custom elements in content scripts** — `customElements` is `null` in a content
+  script's isolated world, so the dock is a plain `<div>` + attached shadow root, not a
+  registered custom element.
+- **`user-select: none` on the `/changes` view** — GitHub sets it on many diff cells, so
+  highlighting code there can yield an empty selection. The highlight UX may need to
+  account for GitHub's custom selection model on that view.
 - **Native-host install friction** + the fixed-extension-ID requirement in dev.
 - **Subscription-via-CLI ToS** — fine for personal use; a gray area for wider
   distribution. Revisit before publishing.
