@@ -109,6 +109,18 @@ export class DockPanel {
         this.submit()
       }
     })
+
+    // Keep keystrokes inside the dock. GitHub's global hotkeys (s, /, t, f, c, …)
+    // listen on document and would steal focus to its search/filter inputs: because
+    // focus is inside our shadow root, document.activeElement is the host <div>, not
+    // the textarea, so GitHub doesn't realize the user is typing. Stopping these
+    // events at the host boundary keeps them from reaching GitHub's handlers.
+    const stopKeys = (e: Event): void => {
+      e.stopPropagation()
+    }
+    this.host.addEventListener('keydown', stopKeys)
+    this.host.addEventListener('keyup', stopKeys)
+    this.host.addEventListener('keypress', stopKeys)
   }
 
   /** Append the dock into the page (defaults to <body>). */
