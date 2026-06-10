@@ -1,0 +1,9 @@
+node_modules
+dist
+*.log
+.DS_Store
+.vite
+
+# Extension signing private key — never commit
+key.pem
+*.der
