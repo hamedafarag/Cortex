@@ -62,6 +62,8 @@ export interface NativeAskMessage {
   type: 'ask'
   id: string
   request: AskRequest
+  /** Model alias/id passed to `claude --model` (from settings). */
+  model: string
 }
 
 /** background -> host: cancel an in-flight ask. */

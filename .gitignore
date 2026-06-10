@@ -7,3 +7,6 @@ dist
 # Extension signing private key — never commit
 key.pem
 *.der
+
+# Native host wrapper — generated per-machine by install.sh (absolute paths)
+native-host/reviewer-host.sh

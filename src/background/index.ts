@@ -12,11 +12,13 @@ import {
 import type { AskRequest } from '../shared/types'
 import { registry, NoProviderAvailableError } from './providers/registry'
 import { AnthropicProvider } from './providers/anthropic'
+import { ClaudeCodeProvider } from './providers/claudeCode'
 
 console.debug('[YCRA] background service worker loaded')
 
-// Register available providers. The Claude Code CLI provider is added in #8.
+// Register available providers; the registry picks one per request from settings.
 registry.register(new AnthropicProvider())
+registry.register(new ClaudeCodeProvider())
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== PORT_NAME) return

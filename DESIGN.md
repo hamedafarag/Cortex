@@ -154,12 +154,20 @@ Rides the user's local CLI auth/subscription. Three pieces + an install step.
 1. **Host manifest** (JSON) placed in the browser's `NativeMessagingHosts/` directory:
    - `"type": "stdio"`, `"path"` → host script,
    - `"allowed_origins": ["chrome-extension://<EXT_ID>/"]`.
-2. **Host script** (`reviewer-host.js`, Node):
+2. **Host script** (`reviewer-host.mjs`, Node):
    - Reads Chrome's framing on **stdin**: 4-byte little-endian length prefix + UTF-8 JSON.
-   - Runs the model, writes the same framing to **stdout**.
-   - Prefers the **Claude Agent SDK** (structured streaming, can hold a session for
-     follow-ups, uses local CLI auth). Falls back to shelling
-     `claude -p --output-format stream-json` if the SDK doesn't fit.
+   - Runs the model, writes the same framing to **stdout** (never logs to stdout).
+   - **Implemented (v1):** shells `claude -p --output-format stream-json
+     --include-partial-messages --verbose` in **lean mode** — `--setting-sources ""`,
+     `--strict-mcp-config`, disabled file/bash tools, neutral cwd — so it skips the
+     user's plugins/MCP/hooks/CLAUDE.md and rides the **subscription** (OAuth). Parses
+     `stream_event → content_block_delta → text_delta` for streaming, `result` for
+     done/error. Even lean, `claude -p` carries ~10–17k tokens of base prompt + tool
+     schemas per call (≈1–2¢, cached after the first) — it's an agent, not a bare LLM
+     endpoint. `CLAUDE_CODE_SIMPLE` strips this but forces API-key auth (no subscription).
+   - **Future optimization:** read the subscription OAuth token and call the Messages API
+     directly (`Authorization: Bearer` + `anthropic-beta: oauth-2025-04-20`) — lean/fast/
+     cheap, at the cost of token refresh handling and a larger ToS gray area.
 3. **Installer** (`install.sh` / `install.ps1`) — registers the host per-OS:
    - macOS: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`
    - Linux: `~/.config/google-chrome/NativeMessagingHosts/`
