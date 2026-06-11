@@ -24,6 +24,10 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   (praise / nit / suggestion / issue / question / thought / chore × none / non-blocking /
   blocking / if-minor) and prepends it to the focused comment box, so review notes read
   clearly as blocking, optional, or FYI. (Phase 3a)
+- **Threaded follow-ups** — the dock now keeps a conversation: ask a follow-up and the model
+  receives the prior turns (`AskRequest.history`, wired through both the API provider and the
+  CLI host). The answer area shows the thread (questions + answers); a **New thread** button
+  resets it. (Phase 3a)
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated

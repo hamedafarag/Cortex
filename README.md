@@ -8,8 +8,9 @@ A browser extension (Manifest V3) that gives you an in-page AI copilot while rev
 GitHub pull requests — **without** handing the review off to a third-party bot. You stay
 the reviewer; the extension is your assistant.
 
-Open a PR and a **dock panel** appears at the bottom of the page. Highlight code in the
-diff, ask a question, and get a streamed, markdown-rendered answer. The AI backend is
+Open a PR and a small **Cortex button** appears at the bottom-right — click it to open the
+dock (a full-width panel; collapse it back from the header so it never blocks the page).
+Highlight code in the diff, ask a question, and get a streamed, markdown-rendered answer. The AI backend is
 pluggable: use the **Anthropic API** (your own key) or the **Claude Code CLI** (your
 existing Claude subscription, via a local native host) — your code never goes to a
 third-party server.
@@ -30,6 +31,8 @@ third-party server.
   into the composer to edit, then post) and **Copy** — no retyping.
 - **Suggest a fix** — get a committable GitHub `suggestion` block for the selected lines that
   the author can apply in one click; multi-line selections anchor to the whole range.
+- **Threaded follow-ups** — keep asking about the same code in one conversation; each
+  follow-up carries the prior turns. **New thread** clears it.
 - **Two interchangeable backends** behind one interface, with automatic fallback:
   - **Anthropic API** — your own API key, billed to your account.
   - **Claude Code CLI** — your Claude subscription, via a local native-messaging host that
@@ -147,10 +150,12 @@ and revoke the classic one when you're done.
 
 ## Usage
 
-1. Open any GitHub pull request.
+1. Open any GitHub pull request — a **Cortex button** sits at the bottom-right; click it to
+   open the dock (the header chevron collapses it back to the button).
 2. Highlight code in the diff — the dock's chip shows the captured `file :lines`.
 3. Type a question and click **Ask** (or ⌘/Ctrl+Enter) — or click **Suggest a fix** for a
-   committable `suggestion` block on the selected lines. The answer streams in.
+   committable `suggestion` block on the selected lines. The answer streams in; ask follow-ups
+   in the same thread, or start fresh with the **New** button in the dock header.
 4. From a finished answer, click **Use as comment** to drop it into the composer (edit it
    first), or **Copy** it.
 5. **Insert** a canned snippet from the **Insert** tray, or click a **Label** (suggestion,

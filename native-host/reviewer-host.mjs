@@ -41,9 +41,18 @@ function send(message) {
 
 // ---- prompt assembly (mirrors the Anthropic provider) -------------------------
 
-function buildPrompt(request) {
-  const { context, question } = request
-  const parts = [`Pull request: ${context.repo} #${context.prNumber}`]
+export function buildPrompt(request) {
+  const { context, question, history } = request
+  const parts = []
+  if (history?.length) {
+    parts.push(
+      'Conversation so far:\n' +
+        history
+          .map((t) => `${t.role === 'user' ? 'User' : 'Assistant'}: ${t.content}`)
+          .join('\n\n'),
+    )
+  }
+  parts.push(`Pull request: ${context.repo} #${context.prNumber}`)
   if (context.prTitle) parts.push(`PR title: ${context.prTitle}`)
   if (context.prBody) parts.push(`PR description:\n${context.prBody}`)
   if (context.file) parts.push(`File: ${context.file}`)

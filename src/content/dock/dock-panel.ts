@@ -9,9 +9,18 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { CannedComment, ConventionalLabel } from '../comments'
+import type { ChatMessage } from '../../shared/types'
 import { icon } from './icons'
 
 marked.setOptions({ gfm: true, breaks: true })
+
+/** Escape user text (questions are shown verbatim in the conversation thread). */
+function escapeHtml(s: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }
+  return s.replace(/[&<>"']/g, (c) => map[c])
+}
 
 /** Attribute used to find/dedupe the dock host in the page DOM. */
 export const DOCK_SELECTOR = '[data-ycra-dock]'
@@ -79,6 +88,14 @@ const STYLES = `
     background: none; color: var(--fg-muted); cursor: pointer; padding: 0;
   }
   .iconbtn:hover { background: var(--bg-inset); color: var(--fg); }
+  .iconbtn[hidden] { display: none }
+  .newthread {
+    font: inherit; font-size: 11px; font-weight: 600; color: var(--fg-muted);
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    padding: 3px 9px; cursor: pointer;
+  }
+  .newthread:hover { background: var(--bg-inset); color: var(--fg); border-color: var(--fg-muted); }
+  .newthread[hidden] { display: none }
 
   /* ── launcher (collapsed state) ───────────────────────────────────── */
   .launcher {
@@ -121,6 +138,18 @@ const STYLES = `
   .answer pre code { background: none; padding: 0 }
   .answer a { color: var(--accent) }
   .answer blockquote { border-left: 3px solid var(--border); padding-left: 10px; color: var(--fg-muted) }
+
+  /* ── conversation turns ───────────────────────────────────────────── */
+  .turn-q {
+    font-weight: 600; color: var(--fg); white-space: pre-wrap; word-break: break-word;
+    padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--border-muted);
+  }
+  .turn-q:first-child { padding-top: 0; margin-top: 0; border-top: none; }
+  .turn-q::before {
+    content: "You"; margin-right: 6px;
+    font: 600 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--cortex);
+  }
+  .turn-a { margin-top: 6px }
 
   /* ── answer actions ───────────────────────────────────────────────── */
   .answer-actions { display: flex; gap: 6px; padding: 0 14px 10px; }
@@ -197,6 +226,7 @@ function header(): string {
       </div>
       <span class="spacer"></span>
       <span class="chip" hidden>${icon('code', 13)}<span class="label"></span></span>
+      <button class="newthread" type="button" title="Clear the conversation and start a new thread" aria-label="New thread" hidden>New</button>
       <button class="iconbtn toggle" type="button" title="Collapse / expand" aria-label="Collapse">${icon('chevronDown', 16)}</button>
     </div>`
 }
@@ -257,9 +287,16 @@ export class DockPanel {
   private readonly trayStatusEl: HTMLSpanElement
   private readonly labelChipsEl: HTMLSpanElement
   private readonly decorationSelect: HTMLSelectElement
+  private readonly newThreadBtn: HTMLButtonElement
   private trayTimer: number | undefined
   private streaming = false
   private rawAnswer = ''
+  /** Finalized conversation turns (oldest first); `display` overrides the shown question text. */
+  private turns: (ChatMessage & { display?: string })[] = []
+  private pendingQuestion: string | null = null
+  private pendingDisplay = ''
+  /** Cached HTML of finalized turns + the in-flight question, so streaming only re-renders the answer. */
+  private threadPrefix = ''
 
   constructor() {
     this.host = document.createElement('div')
@@ -281,13 +318,16 @@ export class DockPanel {
     this.trayStatusEl = this.root.querySelector('.tray-status')!
     this.labelChipsEl = this.root.querySelector('.label-chips')!
     this.decorationSelect = this.root.querySelector('.decoration')!
+    this.newThreadBtn = this.root.querySelector('.newthread')!
 
     this.root.querySelector('.header')!.addEventListener('click', (e) => {
-      // Let the chip text be selectable without toggling.
-      if ((e.target as HTMLElement).closest('.chip')) return
+      const t = e.target as HTMLElement
+      // Chip text stays selectable; the New-thread button has its own handler.
+      if (t.closest('.chip') || t.closest('.newthread')) return
       this.toggleCollapsed()
     })
     this.root.querySelector('.launcher')!.addEventListener('click', () => this.toggleCollapsed())
+    this.newThreadBtn.addEventListener('click', () => this.newThread())
     this.askBtn.addEventListener('click', () => this.submit())
     this.suggestBtn.addEventListener('click', () => {
       if (!this.streaming) this.onSuggest?.()
@@ -410,21 +450,60 @@ export class DockPanel {
     )
   }
 
+  // ── conversation ───────────────────────────────────────────────────
+  /** The finalized conversation, for the next request's `history`. */
+  getHistory(): ChatMessage[] {
+    return this.turns.map((t) => ({ role: t.role, content: t.content }))
+  }
+
+  /** Clear the thread back to the empty placeholder. */
+  newThread(): void {
+    this.turns = []
+    this.pendingQuestion = null
+    this.pendingDisplay = ''
+    this.threadPrefix = ''
+    this.rawAnswer = ''
+    this.showAnswerActions(false)
+    this.newThreadBtn.hidden = true
+    this.answerEl.className = 'answer placeholder'
+    this.answerEl.textContent = 'Highlight code in the diff, then ask a question.'
+  }
+
+  /** Rendered HTML for the finalized turns — questions verbatim, answers as markdown. */
+  private finalizedHtml(): string {
+    return this.turns
+      .map((t) =>
+        t.role === 'user'
+          ? `<div class="turn-q">${escapeHtml(t.display ?? t.content)}</div>`
+          : `<div class="turn-a">${DOMPurify.sanitize(marked.parse(t.content) as string)}</div>`,
+      )
+      .join('')
+  }
+
   // ── ask lifecycle ──────────────────────────────────────────────────
-  startAnswer(): void {
+  startAnswer(question: string, display?: string): void {
     this.streaming = true
     this.askBtn.disabled = true
     this.suggestBtn.disabled = true
     this.host.removeAttribute('collapsed')
     this.rawAnswer = ''
+    this.pendingQuestion = question
+    this.pendingDisplay = display ?? question
     this.showAnswerActions(false)
+    this.threadPrefix =
+      this.finalizedHtml() + `<div class="turn-q">${escapeHtml(this.pendingDisplay)}</div>`
     this.answerEl.className = 'answer'
-    this.answerEl.innerHTML = `<div class="status-row spinner">${icon('spinner', 15)}<span>Thinking…</span></div>`
+    this.answerEl.innerHTML =
+      this.threadPrefix +
+      `<div class="status-row spinner">${icon('spinner', 15)}<span>Thinking…</span></div>`
+    this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   appendText(delta: string): void {
     this.rawAnswer += delta
-    this.answerEl.innerHTML = DOMPurify.sanitize(marked.parse(this.rawAnswer) as string)
+    this.answerEl.innerHTML =
+      this.threadPrefix +
+      `<div class="turn-a">${DOMPurify.sanitize(marked.parse(this.rawAnswer) as string)}</div>`
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
@@ -432,11 +511,20 @@ export class DockPanel {
     this.streaming = false
     this.askBtn.disabled = false
     this.suggestBtn.disabled = false
-    if (!this.rawAnswer.trim()) {
-      this.answerEl.className = 'answer placeholder'
-      this.answerEl.textContent = '(no response)'
-    } else {
+    if (this.rawAnswer.trim() && this.pendingQuestion != null) {
+      // Commit the exchange; keep rawAnswer so "Use as comment" can act on the latest answer.
+      this.turns.push({ role: 'user', content: this.pendingQuestion, display: this.pendingDisplay })
+      this.turns.push({ role: 'assistant', content: this.rawAnswer })
+      this.pendingQuestion = null
+      this.newThreadBtn.hidden = false
+      this.answerEl.className = 'answer'
+      this.answerEl.innerHTML = this.finalizedHtml()
+      this.answerEl.scrollTop = this.answerEl.scrollHeight
       this.showAnswerActions(true)
+    } else {
+      this.pendingQuestion = null
+      this.answerEl.innerHTML =
+        this.threadPrefix + `<div class="status-row"><span>(no response)</span></div>`
     }
   }
 
@@ -446,9 +534,13 @@ export class DockPanel {
     this.suggestBtn.disabled = false
     this.host.removeAttribute('collapsed')
     this.showAnswerActions(false)
+    this.pendingQuestion = null
     this.answerEl.className = 'answer'
-    this.answerEl.innerHTML = `<div class="status-row error">${icon('alert', 16)}<span></span></div>`
-    this.answerEl.querySelector('span')!.textContent = message
+    this.answerEl.innerHTML =
+      this.finalizedHtml() +
+      `<div class="status-row error">${icon('alert', 16)}<span class="msg"></span></div>`
+    this.answerEl.querySelector('.status-row.error .msg')!.textContent = message
+    this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   // ── post lifecycle ─────────────────────────────────────────────────
@@ -467,9 +559,11 @@ export class DockPanel {
     this.showAnswerActions(false)
     this.answerEl.className = 'answer'
     this.answerEl.innerHTML =
+      this.finalizedHtml() +
       `<div class="status-row ok">${icon('check', 16)}<span>Comment posted — </span>` +
       `<a target="_blank" rel="noopener noreferrer">view on GitHub ${icon('externalLink', 12)}</a></div>`
-    this.answerEl.querySelector('a')!.setAttribute('href', url)
+    this.answerEl.querySelector('.status-row.ok a')!.setAttribute('href', url)
+    this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   postFailed(message: string): void {

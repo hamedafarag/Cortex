@@ -165,7 +165,7 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
-| Per-selection threaded follow-ups (conversation history) | CodeRabbit chat, Greptile, Korbit | 🟡 | L / High |
+| Per-selection threaded follow-ups (conversation history) | CodeRabbit chat, Greptile, Korbit | ✅ | L / High |
 | Persist conversation / findings per PR | Reviewable, CodeStream | 🟡 | M / M |
 | Review-progress / mark-as-viewed tracking | GitHub "Viewed", Gerrit, Reviewable | ⬜ | M / L |
 | Export review as markdown / save findings | What The Diff | ⬜ | L / L |
@@ -207,11 +207,11 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 ## Cortex today — have / planned / not present
 
 > **Updated 2026-06-11 — Phase 3a shipped:** the answer→comment bridge, PR-intent grounding,
-> committable `suggestion` blocks (+ multi-line anchoring), and the Conventional Comments
-> picker are now **implemented** and verified (see [PLAN.md](PLAN.md) ·
+> committable `suggestion` blocks (+ multi-line anchoring), the Conventional Comments picker,
+> and threaded follow-ups are now **implemented** and verified (see [PLAN.md](PLAN.md) ·
 > [CHANGELOG.md](CHANGELOG.md)). The "Top picks" / "Quick wins" above were written before that
-> and list these as to-build; the lists below reflect current state. Next in 3a: threaded
-> follow-ups.
+> and list these as to-build; the lists below reflect current state. **Phase 3a (#1–5) is
+> complete.**
 
 **Already has:** highlight-and-ask (streamed markdown via Anthropic API or Claude Code CLI);
 dock with answer area, input, canned-comment tray, file:line chip; 10 canned snippets;
@@ -221,11 +221,11 @@ options page (provider, key, model, PAT); both backends; streaming + abort; adap
 theming; actionable error states; loading states; color-blind-safe UI; `install.sh`; docs.
 **Phase 3a:** answer→**Use as comment** / Copy bridge; PR-intent (title/body) grounding;
 committable `suggestion` blocks via **Suggest a fix**; Conventional Comments label + decoration
-picker.
+picker; threaded follow-ups (conversation `history` + **New thread**); dock collapses to a
+launcher button → full-width panel.
 
-**Planned (Phase 3):** threaded follow-ups (history, 3a — next); whole-file/PR review; severity
-tags; persist per PR. *(Later: GitLab/Bitbucket, Web Store packaging, Windows native-host
-script.)*
+**Planned (Phase 3):** whole-file/PR review; severity tags; persist per PR. *(Later:
+GitLab/Bitbucket, Web Store packaging, Windows native-host script.)*
 
 **Not present:** batch/pending review; review verdict; secret redaction; slash commands;
 undo-after-post; export markdown; comment threading/replies; editable templates.

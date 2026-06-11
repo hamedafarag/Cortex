@@ -127,9 +127,12 @@ Still reviewer-driven, on demand, never autonomous.
   path refactored to share field-finding). *Verified: 8 component-harness checks + a real test
   on a live GitHub PR in Edge — prepended `suggestion (non-blocking): …` into GitHub's actual
   comment textarea with focus retained.*
-- [ ] **Threaded follow-ups** — wire the already-defined `AskRequest.history` end-to-end
-  (dock accumulates turns; content script populates `history` on submit). Both providers
-  already forward it — only the dock/content wiring is missing.
+- [x] **Threaded follow-ups** — `AskRequest.history` wired end-to-end. The dock owns the
+  conversation: it renders prior Q&A turns, exposes `getHistory()` to feed the next request,
+  and has a **New thread** reset. The API provider already mapped history to messages; the CLI
+  host now serializes it as a `Conversation so far:` transcript too (it was silently dropping
+  follow-up context). *Verified: 6 host assertions (Node) + 18 dock-flow assertions (browser)
+  + screenshot.*
 
 ### 3b. On-demand review depth
 - [ ] **Whole-file / whole-PR review** — feed the full file patch (not one hunk) / all file

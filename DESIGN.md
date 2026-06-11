@@ -232,8 +232,11 @@ truth.**
 - A plain `<div>` host with an **attached shadow root** (content scripts can't register
   custom elements — `customElements` is null), mounted by the content script; CSS inlined
   into the shadow root for full isolation.
-- Pinned to the bottom of the viewport, collapsible.
-- Sections: an answer area (renders streamed markdown) with answer→comment actions
+- **Collapsed by default** to a small Cortex **launcher button** (bottom-right); clicking it
+  expands a **full-width** panel pinned to the bottom of the viewport, and the header collapses
+  it back to the button — so the dock never blocks page content unless the reviewer opens it.
+- Sections: an answer area that renders the streamed-markdown **conversation thread**
+  (threaded follow-ups via `history` + a **New thread** reset) with answer→comment actions
   (**Use as comment** / Copy); an **Insert** tray (canned snippets) and a **Label** tray
   (Conventional Comments); and a composer with **Ask** / **Suggest a fix** / **Post to line**.
 - No framework — vanilla DOM + Web Components, per decision.

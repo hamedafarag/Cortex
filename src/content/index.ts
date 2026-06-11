@@ -45,12 +45,12 @@ function selectionLabel(s: SelectionContext): string {
 }
 
 /** Send one ask over a fresh port and stream the reply into the dock. */
-function ask(request: AskRequest, dock: DockPanel): void {
+function ask(request: AskRequest, dock: DockPanel, display?: string): void {
   const id = crypto.randomUUID()
   const port = chrome.runtime.connect({ name: PORT_NAME })
   let settled = false
 
-  dock.startAnswer()
+  dock.startAnswer(request.question, display)
 
   port.onMessage.addListener((msg: BackgroundToContent) => {
     if (msg.id !== id) return
@@ -101,6 +101,7 @@ function onSubmit(dock: DockPanel, question: string): void {
         selectedCode: s.selectedCode,
         language: s.language,
       },
+      history: dock.getHistory(),
     },
     dock,
   )
@@ -136,8 +137,10 @@ function onSuggest(dock: DockPanel): void {
         selectedCode: s.selectedCode,
         language: s.language,
       },
+      history: dock.getHistory(),
     },
     dock,
+    'Suggest a fix',
   )
 }
 
