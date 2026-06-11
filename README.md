@@ -93,11 +93,51 @@ options*) and pick an **AI backend**.
 
 ---
 
+## Posting review comments (GitHub token)
+
+The dock can post **line-anchored review comments** straight to a PR via the GitHub API,
+using **your own token** (your GitHub — no third party). Comments are posted **as you**.
+Add the token in **Options → GitHub token**.
+
+> Security: the token is stored in `chrome.storage.local` (this browser only, **not
+> encrypted at rest**, never synced) and sent only to `api.github.com`. Scope it as
+> narrowly as you can, and revoke it when you don't need it.
+
+### Recommended — a fine-grained token (smallest blast radius)
+
+1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens
+   → Generate new token** (<https://github.com/settings/personal-access-tokens/new>).
+2. **Token name** + a real **expiration** (avoid "No expiration").
+3. **Resource owner** → select the **organization** that owns the repos (e.g. `your-org`),
+   *not* your personal account. ← most common mistake.
+4. **Repository access** → **Only select repositories** → pick the repos you review.
+5. **Permissions → Repository permissions → Pull requests → Read and write** — the only
+   permission needed (Metadata: Read is added automatically).
+6. **Generate token**, copy the `github_pat_…` value, paste it into Options.
+
+**Org gate:** for org repos the organization must *allow* fine-grained tokens, and may
+require an **owner to approve** your token (it stays *pending* until approved). If posting
+returns **404 Not Found**, that's the cause — ask a GitHub org owner to enable/approve it
+under *Org → Settings → Third-party Access → Personal access tokens*.
+
+### Fallback — a classic token
+
+A classic token with the **`repo`** scope also works. For SAML-SSO orgs, click **Configure
+SSO → Authorize** on the token. It's easier to get working but far more powerful (it can
+read/write **every** repo you can access), so prefer a fine-grained token where you can,
+and revoke the classic one when you're done.
+
+---
+
 ## Usage
 
 1. Open any GitHub pull request.
 2. Highlight code in the diff — the dock's chip shows the captured `file :lines`.
 3. Type a question and click **Ask** (or ⌘/Ctrl+Enter). The answer streams in.
+4. **Insert** a canned review comment (Nit, Needs test, …) into GitHub's comment box from
+   the dock's **Insert:** tray.
+5. **Post to line** — type a comment and post it as a line-anchored review comment via the
+   GitHub API (needs a token — see above). The dock links to the created comment.
 
 ---
 

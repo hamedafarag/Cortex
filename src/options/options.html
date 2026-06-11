@@ -29,7 +29,7 @@
         border-radius: 6px; padding: 10px 12px; font-size: 12px; margin-top: 8px;
         line-height: 1.5;
       }
-      .tip ul { margin: 6px 0 0; padding-left: 18px; }
+      .tip ul, .tip ol { margin: 6px 0; padding-left: 18px; }
       .tip li { margin: 2px 0; }
       .status { font-size: 12px; color: #1a7f37; min-height: 18px; font-weight: 600; }
     </style>
@@ -76,14 +76,20 @@
       </div>
       <div class="tip">
         <strong>Recommended: a
-        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">fine-grained token</a>, scoped narrowly:</strong>
-        <ul>
-          <li><strong>Repository access</strong> → only the repos you review (not "All repositories")</li>
-          <li><strong>Permissions</strong> → <strong>Pull requests: Read and write</strong> — nothing else</li>
-        </ul>
-        This limits the damage if the token ever leaks. A classic token with the
-        <code>repo</code> scope also works, but it can touch <em>every</em> repo you can
-        access. For org repos, the org must allow fine-grained tokens. Revoke anytime in
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">fine-grained token</a></strong>
+        (smallest blast radius). When creating it:
+        <ol>
+          <li><strong>Resource owner</strong> → the <strong>organization</strong> that owns the repos — <em>not</em> your personal account</li>
+          <li><strong>Repository access</strong> → <em>Only select repositories</em> → the repos you review</li>
+          <li><strong>Permissions → Pull requests: Read and write</strong> — nothing else</li>
+        </ol>
+        <strong>Org gate:</strong> for org repos the org must allow fine-grained tokens and
+        may need an <strong>owner to approve</strong> the token (it stays <em>pending</em>
+        until then). If posting returns <strong>404</strong>, that's the cause.
+        <br /><br />
+        A classic token with the <code>repo</code> scope also works (for SSO orgs, click
+        <em>Configure SSO → Authorize</em> on the token) but can touch <em>every</em> repo
+        you can access. Revoke anytime in
         <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">GitHub → Developer settings</a>.
       </div>
     </div>
