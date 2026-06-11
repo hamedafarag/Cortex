@@ -18,11 +18,19 @@
         font: inherit; box-sizing: border-box;
       }
       .hint { font-size: 12px; color: #57606a; margin-top: 4px; }
+      .hint a, .tip a { color: #0969da; }
       .field.dimmed { opacity: 0.5; }
       .notice {
         background: #fff8c5; border: 1px solid rgba(212, 167, 44, 0.4);
         border-radius: 6px; padding: 10px 12px; font-size: 12px; margin: 20px 0;
       }
+      .tip {
+        background: #ddf4ff; border: 1px solid rgba(9, 105, 218, 0.3);
+        border-radius: 6px; padding: 10px 12px; font-size: 12px; margin-top: 8px;
+        line-height: 1.5;
+      }
+      .tip ul { margin: 6px 0 0; padding-left: 18px; }
+      .tip li { margin: 2px 0; }
       .status { font-size: 12px; color: #1a7f37; min-height: 18px; font-weight: 600; }
     </style>
   </head>
@@ -61,9 +69,22 @@
       <label for="githubPat">GitHub token <span class="hint" style="font-weight: 400">(optional — for posting comments)</span></label>
       <input id="githubPat" type="password" placeholder="github_pat_… or ghp_…" autocomplete="off" spellcheck="false" />
       <div class="hint">
-        A fine-grained PAT with <strong>Pull requests: Read and write</strong> (or a classic
-        token with <code>repo</code> scope) lets the dock post line-anchored review comments
-        to your PRs. Stored locally; never synced.
+        Lets the dock post line-anchored review comments to your PRs. Comments are posted
+        <strong>as you</strong>. The token is stored only in this browser
+        (<code>chrome.storage.local</code>) — <strong>not encrypted at rest</strong>, never
+        synced, and sent only to <code>api.github.com</code> (no third party).
+      </div>
+      <div class="tip">
+        <strong>Recommended: a
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">fine-grained token</a>, scoped narrowly:</strong>
+        <ul>
+          <li><strong>Repository access</strong> → only the repos you review (not "All repositories")</li>
+          <li><strong>Permissions</strong> → <strong>Pull requests: Read and write</strong> — nothing else</li>
+        </ul>
+        This limits the damage if the token ever leaks. A classic token with the
+        <code>repo</code> scope also works, but it can touch <em>every</em> repo you can
+        access. For org repos, the org must allow fine-grained tokens. Revoke anytime in
+        <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">GitHub → Developer settings</a>.
       </div>
     </div>
 
