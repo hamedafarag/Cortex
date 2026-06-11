@@ -6,6 +6,11 @@
 // root (open so the content script and tests can reach in), and build the UI
 // directly. Style isolation still comes from the shadow root + `:host` rules.
 
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+marked.setOptions({ gfm: true, breaks: true })
+
 /** Attribute used to find/dedupe the dock host in the page DOM. */
 export const DOCK_SELECTOR = '[data-ycra-dock]'
 
@@ -38,10 +43,27 @@ const STYLES = `
   :host([collapsed]) .body { display: none; }
   .answer {
     padding: 12px; overflow-y: auto; min-height: 64px; max-height: 220px;
-    white-space: pre-wrap; word-break: break-word;
+    word-break: break-word;
   }
+  .answer.empty, .answer.error { white-space: pre-wrap; }
   .answer.empty { color: #8c959f; }
   .answer.error { color: #cf222e; }
+  .answer > :first-child { margin-top: 0; }
+  .answer > :last-child { margin-bottom: 0; }
+  .answer p, .answer ul, .answer ol, .answer pre, .answer blockquote { margin: 0 0 8px; }
+  .answer ul, .answer ol { padding-left: 20px; }
+  .answer h1, .answer h2, .answer h3, .answer h4 { font-size: 14px; margin: 10px 0 4px; }
+  .answer pre {
+    background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;
+    padding: 10px; overflow-x: auto;
+  }
+  .answer code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px;
+  }
+  .answer :not(pre) > code { background: #eaeef2; padding: 1px 4px; border-radius: 4px; }
+  .answer pre code { background: none; padding: 0; }
+  .answer a { color: #0969da; }
+  .answer blockquote { border-left: 3px solid #d0d7de; padding-left: 10px; color: #57606a; }
   .composer { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid #d0d7de; }
   textarea {
     flex: 1; resize: none; min-height: 36px; max-height: 120px;
@@ -88,6 +110,8 @@ export class DockPanel {
   private readonly askBtn: HTMLButtonElement
   private readonly toggleEl: HTMLSpanElement
   private streaming = false
+  /** Raw markdown accumulated across stream chunks; re-rendered on each delta. */
+  private rawAnswer = ''
 
   constructor() {
     this.host = document.createElement('div')
@@ -155,18 +179,22 @@ export class DockPanel {
     this.askBtn.disabled = true
     this.host.removeAttribute('collapsed')
     this.answerEl.classList.remove('empty', 'error')
-    this.answerEl.textContent = ''
+    this.rawAnswer = ''
+    this.answerEl.replaceChildren()
   }
 
   appendText(delta: string): void {
-    this.answerEl.textContent += delta
+    this.rawAnswer += delta
+    // Re-render the accumulated markdown each chunk; sanitize since model output
+    // is written via innerHTML. Cheap for short answers.
+    this.answerEl.innerHTML = DOMPurify.sanitize(marked.parse(this.rawAnswer) as string)
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   finishAnswer(): void {
     this.streaming = false
     this.askBtn.disabled = false
-    if (!this.answerEl.textContent) {
+    if (!this.rawAnswer.trim()) {
       this.answerEl.classList.add('empty')
       this.answerEl.textContent = '(no response)'
     }

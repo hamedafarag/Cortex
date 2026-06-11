@@ -8,56 +8,56 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ---
 
-## Phase 0 — Scaffolding & tooling
+## Phase 0 — Scaffolding & tooling ✅
 
-- [ ] Init project: `npm`, TypeScript, Vite, `@crxjs/vite-plugin`
-- [ ] Create folder structure (`src/background`, `src/content`, `src/options`, `src/shared`, `native-host/`)
-- [ ] `tsconfig.json` + `vite.config.ts` configured for MV3
-- [ ] `manifest.config.ts` (MV3) with a **fixed `"key"`** so the extension ID is stable in dev
-- [ ] Minimal permissions: `host_permissions` (`github.com`, `api.anthropic.com`), `nativeMessaging`
-- [ ] Placeholder icons in `public/icons/`
-- [ ] **Gate:** load-unpacked succeeds — empty extension appears in `chrome://extensions`
+- [x] Init project: `npm`, TypeScript, Vite, `@crxjs/vite-plugin`
+- [x] Create folder structure (`src/background`, `src/content`, `src/options`, `src/shared`, `native-host/`)
+- [x] `tsconfig.json` + `vite.config.ts` configured for MV3
+- [x] `manifest.config.ts` (MV3) with a **fixed `"key"`** so the extension ID is stable in dev
+- [x] Minimal permissions: `host_permissions` (`github.com`, `api.anthropic.com`), `nativeMessaging`
+- [x] Placeholder icons in `public/icons/`
+- [x] **Gate:** load-unpacked succeeds — extension appears in `chrome://extensions`
 
 ---
 
-## Phase 1 — Dock panel + highlight-and-ask (both providers)
+## Phase 1 — Dock panel + highlight-and-ask (both providers) ✅
 
 ### 1a. Shared contracts
-- [ ] `shared/messages.ts` — port protocol (`ASK`/`ABORT` → `CHUNK`/`DONE`/`ERROR`) + native-host protocol types
-- [ ] `shared/storage.ts` — settings get/set over `chrome.storage.local`
-- [ ] `background/providers/types.ts` — `LlmProvider`, `AskRequest`, `Chunk`
+- [x] `shared/messages.ts` — port protocol (`ASK`/`ABORT` → `CHUNK`/`DONE`/`ERROR`) + native-host protocol types
+- [x] `shared/storage.ts` — settings get/set over `chrome.storage.local`
+- [x] `shared/types.ts` + `background/providers/types.ts` — `LlmProvider`, `AskRequest`, `Chunk`
 
 ### 1b. Provider layer
-- [ ] `providers/registry.ts` — pick active provider from settings + **fallback** when unavailable
-- [ ] `providers/anthropic.ts` — Provider A: streaming Messages API, `anthropic-dangerous-direct-browser-access`, abort
-- [ ] `providers/claudeCode.ts` — Provider B: native-host client (connect, send, stream, abort)
+- [x] `providers/registry.ts` — pick active provider from settings + **fallback** when unavailable
+- [x] `providers/anthropic.ts` — Provider A: streaming Messages API, `anthropic-dangerous-direct-browser-access`, abort
+- [x] `providers/claudeCode.ts` — Provider B: native-host client (connect, send, stream, abort)
 
 ### 1c. Native host (Claude Code CLI)
-- [ ] `native-host/reviewer-host.js` — Node host: 4-byte LE length framing on stdin/stdout
-- [ ] Host runs the model via **Claude Agent SDK** (fallback: `claude -p --output-format stream-json`)
-- [ ] Stream chunks back respecting the **1 MB per-message cap**; handle `abort`
-- [ ] Validate/whitelist message shape (host runs with user privileges — no arbitrary commands)
-- [ ] `native-host/manifest.template.json` with `allowed_origins` pinned to the fixed extension ID
-- [ ] `install.sh` / `install.ps1` — register host per-OS (macOS / Linux / Windows registry)
+- [x] `native-host/reviewer-host.mjs` — Node host: 4-byte LE length framing on stdin/stdout
+- [x] Host runs the model via **lean `claude -p --output-format stream-json`** (subscription; Agent SDK / direct-OAuth noted as future)
+- [x] Stream chunks back (deltas are small, well under the 1 MB cap); handle `abort`
+- [x] Validate message shape (host runs with user privileges — no arbitrary commands)
+- [x] Host manifest written by `install.sh` with `allowed_origins` pinned to the fixed extension ID
+- [x] `install.sh` — register host on macOS / Linux for Edge/Chrome/Chromium/Brave *(Windows: noted, not yet scripted)*
 
 ### 1d. Background worker
-- [ ] `background/index.ts` — service-worker port router: route `ASK`/`ABORT`, relay `CHUNK`/`DONE`/`ERROR`
-- [ ] Wire registry + per-request `AbortController`
+- [x] `background/index.ts` — service-worker port router: route `ASK`/`ABORT`, relay `CHUNK`/`DONE`/`ERROR`
+- [x] Wire registry + per-request `AbortController`
 
 ### 1e. Content script + dock
-- [ ] `content/index.ts` — inject on `github.com/*/pull/*`, mount a shadow-root host node
-- [ ] `content/dock/dock-panel.ts` — `<dock-panel>` Web Component: collapsible, answer area, input
-- [ ] `content/dock/dock.css` — styles inlined into the shadow root (isolation)
-- [ ] Streamed markdown rendering into the answer area
-- [ ] `content/selection.ts` — `window.getSelection()` → `{file, lineRange, code, diffHunk}` from diff DOM
+- [x] `content/index.ts` — inject on `github.com/*/pull/*`, mount a shadow-root host node
+- [x] `content/dock/dock-panel.ts` — dock as a plain `<div>` + shadow root *(not a custom element — `customElements` is null in content scripts)*: collapsible, answer area, input
+- [x] Styles inlined into the shadow root (isolation); keystrokes kept from GitHub's hotkeys
+- [x] Streamed **markdown rendering** into the answer area (marked + DOMPurify)
+- [x] `content/selection.ts` — `window.getSelection()` → `{file, lineRange, code, language}` (both `/files` + `/changes` views; `diffHunk` via GitHub API in Phase 2)
 
 ### 1f. Options page
-- [ ] `options/options.html` + `options.ts` — provider toggle, API-key entry, model select
-- [ ] Persist settings via `shared/storage.ts`
-- [ ] Data-egress notice (highlighted code is sent to Anthropic) + "not encrypted at rest" note
+- [x] `options/options.html` + `options.ts` — provider toggle, API-key entry, model select
+- [x] Persist settings via `shared/storage.ts`
+- [x] Data-egress notice (highlighted code is sent to Anthropic) + "not encrypted at rest" note
 
 ### 1g. End-to-end
-- [ ] **Gate:** manual test on a real PR — highlight → ask → streamed answer, via **both** providers
+- [x] **Gate:** verified on a real PR — highlight → ask → streamed answer (provider B / subscription in Edge; provider A request shape verified offline)
 
 ---
 
