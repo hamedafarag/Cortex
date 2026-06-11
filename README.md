@@ -210,7 +210,14 @@ rm ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.ycra.re
 
 ## Roadmap
 
-See [PLAN.md](PLAN.md). Now in **Phase 3 — from answer to action**: turning AI output into
-real, well-labeled review comments. Done so far: answer→comment bridge and PR-intent
-grounding; next: committable `suggestion` blocks, Conventional Comments labels, threaded
-follow-ups, and whole-PR review.
+See [PLAN.md](PLAN.md) and [CHANGELOG.md](CHANGELOG.md). Now in **Phase 3 — from answer to
+action**: making AI output land as real, well-labeled review comments. **Done (Phase 3a):**
+answer→comment bridge, PR-intent grounding, committable `suggestion` blocks, and Conventional
+Comments labels. **Next:** threaded follow-ups, then whole-PR review and severity-tagged
+findings.
+
+---
+
+## License
+
+[MIT](LICENSE) © Hamed Farag.
