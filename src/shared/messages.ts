@@ -110,9 +110,13 @@ export interface PostCommentMessage {
   prNumber: number
   body: string
   path: string
-  /** Line number in the file on `side` of the diff. */
+  /** Last line of the comment, in the file on `side` of the diff. */
   line: number
   side: 'LEFT' | 'RIGHT'
+  /** First line of a multi-line comment/suggestion (spans `startLine`..`line`).
+   *  Omitted for a single-line anchor. */
+  startLine?: number
+  startSide?: 'LEFT' | 'RIGHT'
 }
 
 export type GithubRequest = PostCommentMessage

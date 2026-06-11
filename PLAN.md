@@ -101,20 +101,32 @@ through-line: **make the AI's output land in the PR as real, well-labeled review
 Still reviewer-driven, on demand, never autonomous.
 
 ### 3a. Quick wins — harvest what's already wired (low effort, high impact)
-- [ ] **Answer → "Post as comment" bridge** — a button under the answer that posts the
-  rendered answer through the existing `GH_POST_COMMENT → createReviewComment` path +
-  remembered anchor. Closes the product's biggest friction loop: today the answer area and
-  the post textarea are separate, forcing a retype.
-- [ ] **PR intent context injection** — read `pr.title` / `pr.body` from the `GET /pulls/{n}`
-  call already made for the head sha; add them to the existing `AskRequest.context` + system
-  prompt so the AI can judge *"does this do what the PR says?"*, not just local correctness.
-- [ ] **Committable `suggestion` blocks** — a "Suggest a fix" action: ask the model for the
-  replacement lines only, wrap them in a triple-backtick `suggestion` fence, post via the
-  existing comment path (no new API). Anchor to the exact selected lines → one-click apply.
-- [ ] **Conventional Comments picker** — upgrade the canned tray to a label
-  (praise / nit / suggestion / issue / question / thought / chore) + decoration
-  (blocking / non-blocking / if-minor) picker that composes a `label [decoration]:` prefix
-  onto a canned or typed body. Pure string composition over the existing insert path.
+- [x] **Answer → comment bridge** — a "Use as comment" action under a finished answer loads
+  the streamed text into the composer (editable, focused); the existing "Post to line" then
+  does the write (edit-then-post — keeps the human-in-the-loop confirm). Plus a "Copy" action.
+  Entirely in `dock-panel.ts` (+ a `copy` icon) — no new wire/background/API code, as predicted.
+  *Verified in-browser via a component harness: 13 behavioural assertions + screenshots.*
+- [x] **PR intent context injection** — every ask now fetches the PR **title + description**
+  (`getPullMeta`, cached per-PR, body truncated) and injects them into `AskRequest.context`,
+  enriched best-effort in the background alongside the diff hunk. Both prompt builders render
+  them (intent before code) and both system prompts tell the model to judge the change against
+  its stated intent. Builder extracted to a dependency-free `shared/prompt.ts` (host mirrors it).
+  *Verified: 8 prompt-assembly assertions on the real builder.*
+- [x] **Committable `suggestion` blocks** — a **Suggest a fix** button asks the model for ONLY
+  a triple-backtick `suggestion` block for the selection; it streams into the answer and rides
+  the answer→comment bridge, so it posts via the existing comment path (no new API).
+  `createReviewComment` + `GH_POST_COMMENT` gained optional `start_line`/`start_side`, and a
+  pure `reviewTarget()` anchors a multi-line selection to the whole range (`startLine`..`line`)
+  so the suggestion replaces exactly those lines (single-line selections unchanged). This also
+  makes ordinary multi-line comments anchor to the full selection. *Verified: 8 `reviewTarget`
+  assertions (Node) + 7 dock-UI assertions (browser) + screenshot.*
+- [x] **Conventional Comments picker** — a second dock tray adds Conventional Comments labels
+  (praise / nit / suggestion / issue / question / thought / chore) + a decoration select
+  (none / non-blocking / blocking / if-minor); clicking a label **prepends** `label: ` or
+  `label (decoration): ` to the focused GitHub comment box via `prependComment` (the insert
+  path refactored to share field-finding). *Verified: 8 component-harness checks + a real test
+  on a live GitHub PR in Edge — prepended `suggestion (non-blocking): …` into GitHub's actual
+  comment textarea with focus retained.*
 - [ ] **Threaded follow-ups** — wire the already-defined `AskRequest.history` end-to-end
   (dock accumulates turns; content script populates `history` on submit). Both providers
   already forward it — only the dock/content wiring is missing.

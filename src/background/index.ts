@@ -15,7 +15,7 @@ import type { AskRequest } from '../shared/types'
 import { registry, NoProviderAvailableError } from './providers/registry'
 import { AnthropicProvider } from './providers/anthropic'
 import { ClaudeCodeProvider } from './providers/claudeCode'
-import { getPullHeadSha, createReviewComment, getDiffHunk } from './github/api'
+import { getPullHeadSha, createReviewComment, getDiffHunk, getPullMeta } from './github/api'
 
 console.debug('[YCRA] background service worker loaded')
 
@@ -33,6 +33,21 @@ async function enrichWithDiffHunk(request: AskRequest): Promise<void> {
       context.lineRange[0],
     )
     if (hunk) context.diffHunk = hunk
+  } catch {
+    // grounding is optional — never fail the ask over it
+  }
+}
+
+/** Best-effort: attach the PR title + description so the model can judge whether the
+ *  change does what it claims, not just whether it's locally correct. Silently skipped
+ *  if unavailable (no PAT, private repo, rate limit). */
+async function enrichWithPrMeta(request: AskRequest): Promise<void> {
+  const { context } = request
+  if (context.prTitle !== undefined || context.prBody !== undefined) return
+  try {
+    const meta = await getPullMeta(context.repo, context.prNumber)
+    if (meta.title) context.prTitle = meta.title
+    if (meta.body) context.prBody = meta.body
   } catch {
     // grounding is optional — never fail the ask over it
   }
@@ -60,7 +75,7 @@ chrome.runtime.onConnect.addListener((port) => {
     const controller = new AbortController()
     inFlight.set(id, controller)
     try {
-      await enrichWithDiffHunk(request)
+      await Promise.all([enrichWithDiffHunk(request), enrichWithPrMeta(request)])
       if (controller.signal.aborted) return
       const { provider } = await registry.resolve()
       for await (const chunk of provider.ask(request, controller.signal)) {
@@ -120,6 +135,8 @@ chrome.runtime.onMessage.addListener((message: GithubRequest, _sender, sendRespo
         path: message.path,
         line: message.line,
         side: message.side,
+        start_line: message.startLine,
+        start_side: message.startSide,
       })
       sendResponse({ ok: true, url: comment.html_url } satisfies GithubResult)
     } catch (err) {

@@ -18,8 +18,10 @@ const SYSTEM_PROMPT =
   'You are an expert code reviewer assisting a human reviewer inside a GitHub ' +
   'pull request. The reviewer highlights code in the diff and asks about it. ' +
   'Answer concisely and concretely, grounded in the provided code and diff, in ' +
-  'GitHub-flavored markdown. Do not use any tools; answer directly from the ' +
-  'provided context. If the context is insufficient, say what else you would need.'
+  'GitHub-flavored markdown. Use any PR title/description to judge whether the ' +
+  'change does what it claims, not just whether it is locally correct. Do not use ' +
+  'any tools; answer directly from the provided context. If the context is ' +
+  'insufficient, say what else you would need.'
 
 // Tools we disallow so the model answers directly (and to trim context).
 const DISALLOWED_TOOLS =
@@ -42,6 +44,8 @@ function send(message) {
 function buildPrompt(request) {
   const { context, question } = request
   const parts = [`Pull request: ${context.repo} #${context.prNumber}`]
+  if (context.prTitle) parts.push(`PR title: ${context.prTitle}`)
+  if (context.prBody) parts.push(`PR description:\n${context.prBody}`)
   if (context.file) parts.push(`File: ${context.file}`)
   if (context.lineRange) parts.push(`Lines: ${context.lineRange[0]}-${context.lineRange[1]}`)
   if (context.selectedCode) {

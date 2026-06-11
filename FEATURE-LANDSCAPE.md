@@ -76,7 +76,7 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 | AI PR summary / TL;DR (whole-PR walkthrough) | CodeRabbit, Copilot, Qodo `/describe`, Graphite, What The Diff | 🟡 | M / High |
 | Per-file changes table (blast-radius map) | CodeRabbit, Qodo `/describe` | ⬜ | M / M |
 | Estimated review-effort score (1–5) | CodeRabbit, Qodo | ⬜ | L / M |
-| PR title/body/commit context injection | CodeRabbit, Qodo, Greptile, Korbit | ⬜ | L / High |
+| PR title/body/commit context injection | CodeRabbit, Qodo, Greptile, Korbit | ✅ | L / High |
 
 - **AI PR summary** — "Summarize PR" button: fetch all file patches (`listPullFiles`),
   concatenate with budgeting for big PRs, stream a summary into the answer area. No new
@@ -116,7 +116,7 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
-| Conventional Comments label picker (praise/nit/issue/… + blocking/non-blocking) | conventionalcomments.org, Graphite | ⬜ | L / High |
+| Conventional Comments label picker (praise/nit/issue/… + blocking/non-blocking) | conventionalcomments.org, Graphite | ✅ | L / High |
 | Severity/courtesy prefixes (Nit: / Optional: / Consider: / FYI:) | Google eng-practices | ✅ partial | L / M |
 | Code-review emoji legend prefixes (CREG) | Code Review Emoji Guide | ⬜ | L / L |
 | Editable/templated canned comments with variables | GitHub saved replies, Graphite | ⬜ | M / M |
@@ -140,8 +140,8 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
-| AI answer → posted review comment bridge (one-click promote) | Graphite Chat, CodeRabbit, Qodo | ⬜ | L / High |
-| GitHub committable `suggestion` blocks | GitHub, CodeRabbit, Qodo, Reviewdog | ⬜ | L / High |
+| AI answer → posted review comment bridge (one-click promote) | Graphite Chat, CodeRabbit, Qodo | ✅ | L / High |
+| GitHub committable `suggestion` blocks | GitHub, CodeRabbit, Qodo, Reviewdog | ✅ | L / High |
 | Batch / pending review (accumulate, submit once) | GitHub Reviews API | ⬜ | H / M |
 | Review verdict (Approve / Request changes / Comment) | GitHub native | ⬜ | M / L |
 
@@ -206,20 +206,29 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 
 ## Cortex today — have / planned / not present
 
+> **Updated 2026-06-11 — Phase 3a shipped:** the answer→comment bridge, PR-intent grounding,
+> committable `suggestion` blocks (+ multi-line anchoring), and the Conventional Comments
+> picker are now **implemented** and verified (see [PLAN.md](PLAN.md) ·
+> [CHANGELOG.md](CHANGELOG.md)). The "Top picks" / "Quick wins" above were written before that
+> and list these as to-build; the lists below reflect current state. Next in 3a: threaded
+> follow-ups.
+
 **Already has:** highlight-and-ask (streamed markdown via Anthropic API or Claude Code CLI);
 dock with answer area, input, canned-comment tray, file:line chip; 10 canned snippets;
-line-anchored comment posting via PAT; GitHub API client (head sha, file/patch list, hunk
-parser); selection capture (file/line/side/code/language); options page (provider, key, model,
-PAT); both backends; streaming + abort; adaptive light/dark theming; actionable error states;
-loading states; color-blind-safe UI; `install.sh`; docs.
+line-anchored comment posting via PAT (single- or multi-line); GitHub API client (head sha,
+PR title/body, file/patch list, hunk parser); selection capture (file/line/side/code/language);
+options page (provider, key, model, PAT); both backends; streaming + abort; adaptive light/dark
+theming; actionable error states; loading states; color-blind-safe UI; `install.sh`; docs.
+**Phase 3a:** answer→**Use as comment** / Copy bridge; PR-intent (title/body) grounding;
+committable `suggestion` blocks via **Suggest a fix**; Conventional Comments label + decoration
+picker.
 
-**Planned (Phase 3):** whole-file/PR review; threaded follow-ups (history); severity tags;
-persist per PR. *(Later: GitLab/Bitbucket, Web Store packaging, Windows native-host script.)*
+**Planned (Phase 3):** threaded follow-ups (history, 3a — next); whole-file/PR review; severity
+tags; persist per PR. *(Later: GitLab/Bitbucket, Web Store packaging, Windows native-host
+script.)*
 
-**Not present:** answer→comment bridge; PR intent/commit context injection; `suggestion`
-blocks; Conventional Comments labels; batch/pending review; review verdict; secret redaction;
-slash commands; undo-after-post; export markdown; comment threading/replies; editable
-templates.
+**Not present:** batch/pending review; review verdict; secret redaction; slash commands;
+undo-after-post; export markdown; comment threading/replies; editable templates.
 
 ## What we deliberately won't build
 

@@ -102,6 +102,32 @@ function findLineRange(range: Range): [number, number] | undefined {
   return [lo, hi]
 }
 
+export interface ReviewTarget {
+  path: string
+  /** Last line of the anchor. */
+  line: number
+  side: DiffSide
+  /** First line of a multi-line anchor (so a `suggestion` replaces the whole range). */
+  startLine?: number
+  startSide?: DiffSide
+}
+
+/**
+ * Where a posted review comment / suggestion should anchor. A multi-line selection
+ * anchors to the whole range (`startLine`..`line`) so a ```suggestion replaces exactly
+ * those lines; a single line anchors to just that line. Null if not postable.
+ */
+export function reviewTarget(sel: SelectionContext): ReviewTarget | null {
+  if (!sel.file || !sel.anchor) return null
+  const { side } = sel.anchor
+  if (sel.lineRange && sel.lineRange[0] !== sel.lineRange[1]) {
+    const lo = Math.min(sel.lineRange[0], sel.lineRange[1])
+    const hi = Math.max(sel.lineRange[0], sel.lineRange[1])
+    return { path: sel.file, line: hi, side, startLine: lo, startSide: side }
+  }
+  return { path: sel.file, line: sel.anchor.line, side }
+}
+
 /** Capture the active selection, or null if nothing meaningful is selected. */
 export function captureSelection(): SelectionContext | null {
   const sel = window.getSelection()

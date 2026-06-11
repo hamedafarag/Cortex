@@ -8,7 +8,7 @@
 
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import type { CannedComment } from '../comments'
+import type { CannedComment, ConventionalLabel } from '../comments'
 import { icon } from './icons'
 
 marked.setOptions({ gfm: true, breaks: true })
@@ -111,6 +111,18 @@ const STYLES = `
   .answer a { color: var(--accent) }
   .answer blockquote { border-left: 3px solid var(--border); padding-left: 10px; color: var(--fg-muted) }
 
+  /* ── answer actions ───────────────────────────────────────────────── */
+  .answer-actions { display: flex; gap: 6px; padding: 0 14px 10px; }
+  .answer-actions[hidden] { display: none }
+  .link-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    font: inherit; font-size: 11px; color: var(--fg-muted);
+    background: none; border: 1px solid transparent; border-radius: 6px;
+    padding: 3px 8px; cursor: pointer;
+  }
+  .link-btn:hover { background: var(--bg-inset); color: var(--fg) }
+  .link-btn .icon { flex: none }
+
   /* ── tray ─────────────────────────────────────────────────────────── */
   .tray {
     display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
@@ -125,6 +137,12 @@ const STYLES = `
   }
   .chip-btn:hover { background: var(--bg-inset); border-color: var(--fg-muted) }
   .tray-status { font-size: 11px; color: var(--success); margin-left: auto; display: inline-flex; align-items: center; gap: 5px }
+  .label-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  select.decoration {
+    font: inherit; font-size: 11px; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px 6px; cursor: pointer;
+  }
 
   /* ── composer ─────────────────────────────────────────────────────── */
   .composer { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 12px; border-top: 1px solid var(--border); }
@@ -135,7 +153,7 @@ const STYLES = `
   }
   textarea::placeholder { color: var(--fg-muted) }
   textarea:focus { outline: 2px solid color-mix(in srgb, var(--cortex) 55%, transparent); outline-offset: -1px; border-color: var(--cortex) }
-  .actions { display: flex; align-items: center; gap: 8px }
+  .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
   .post-status { font-size: 11px; margin-right: auto; display: inline-flex; align-items: center; gap: 6px; min-width: 0 }
   .post-status .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
   .post-status.error { color: var(--danger) }
@@ -178,15 +196,25 @@ const TEMPLATE = `
     ${header()}
     <div class="body">
       <div class="answer placeholder">Highlight code in the diff, then ask a question.</div>
+      <div class="answer-actions" hidden>
+        <button type="button" class="link-btn use-answer" title="Load this answer into the comment box to edit and post">${icon('comment', 13)} Use as comment</button>
+        <button type="button" class="link-btn copy-answer" title="Copy the answer to the clipboard">${icon('copy', 13)} Copy</button>
+      </div>
       <div class="tray">
         <span class="tray-label">${icon('plus', 13)} Insert</span>
         <span class="tray-chips"></span>
         <span class="tray-status"></span>
       </div>
+      <div class="tray labels">
+        <span class="tray-label">${icon('tag', 12)} Label</span>
+        <select class="decoration" title="Conventional Comments decoration"></select>
+        <span class="label-chips"></span>
+      </div>
       <div class="composer">
         <textarea placeholder="Ask about the code, or write a comment to post…" rows="1"></textarea>
         <div class="actions">
           <span class="post-status"></span>
+          <button type="button" class="btn suggest" title="Generate a committable suggestion for the selected lines">${icon('wand', 15)} Suggest a fix</button>
           <button type="button" class="btn ask">${icon('sparkles', 15)} Ask</button>
           <button type="button" class="btn post" title="Post the text above as a review comment on the selected line">${icon('comment', 15)} Post to line</button>
         </div>
@@ -198,20 +226,26 @@ const TEMPLATE = `
 export class DockPanel {
   readonly host: HTMLElement
   onSubmit: ((question: string) => void) | null = null
+  onSuggest: (() => void) | null = null
   onInsertComment: ((body: string) => void) | null = null
+  onApplyLabel: ((label: ConventionalLabel, decoration: string) => void) | null = null
   onPost: ((text: string) => void) | null = null
 
   private readonly root: ShadowRoot
   private readonly answerEl: HTMLDivElement
+  private readonly answerActionsEl: HTMLDivElement
   private readonly chipEl: HTMLSpanElement
   private readonly chipLabel: HTMLSpanElement
   private readonly inputEl: HTMLTextAreaElement
   private readonly askBtn: HTMLButtonElement
+  private readonly suggestBtn: HTMLButtonElement
   private readonly postBtn: HTMLButtonElement
   private readonly postStatusEl: HTMLSpanElement
   private readonly toggleEl: HTMLButtonElement
   private readonly trayChipsEl: HTMLSpanElement
   private readonly trayStatusEl: HTMLSpanElement
+  private readonly labelChipsEl: HTMLSpanElement
+  private readonly decorationSelect: HTMLSelectElement
   private trayTimer: number | undefined
   private streaming = false
   private rawAnswer = ''
@@ -223,15 +257,19 @@ export class DockPanel {
     this.root.innerHTML = TEMPLATE
 
     this.answerEl = this.root.querySelector('.answer')!
+    this.answerActionsEl = this.root.querySelector('.answer-actions')!
     this.chipEl = this.root.querySelector('.chip')!
     this.chipLabel = this.root.querySelector('.chip .label')!
     this.inputEl = this.root.querySelector('textarea')!
     this.askBtn = this.root.querySelector('.btn.ask')!
+    this.suggestBtn = this.root.querySelector('.btn.suggest')!
     this.postBtn = this.root.querySelector('.btn.post')!
     this.postStatusEl = this.root.querySelector('.post-status')!
     this.toggleEl = this.root.querySelector('.toggle')!
     this.trayChipsEl = this.root.querySelector('.tray-chips')!
     this.trayStatusEl = this.root.querySelector('.tray-status')!
+    this.labelChipsEl = this.root.querySelector('.label-chips')!
+    this.decorationSelect = this.root.querySelector('.decoration')!
 
     this.root.querySelector('.header')!.addEventListener('click', (e) => {
       // Let the chip text be selectable without toggling.
@@ -239,10 +277,19 @@ export class DockPanel {
       this.toggleCollapsed()
     })
     this.askBtn.addEventListener('click', () => this.submit())
+    this.suggestBtn.addEventListener('click', () => {
+      if (!this.streaming) this.onSuggest?.()
+    })
     this.postBtn.addEventListener('click', () => {
       const text = this.inputEl.value.trim()
       if (text) this.onPost?.(text)
     })
+    this.root.querySelector('.use-answer')!.addEventListener('click', () =>
+      this.useAnswerAsComment(),
+    )
+    this.root.querySelector('.copy-answer')!.addEventListener('click', () =>
+      this.copyAnswer(),
+    )
     this.inputEl.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
@@ -298,6 +345,28 @@ export class DockPanel {
     }
   }
 
+  renderLabels(labels: ConventionalLabel[], decorations: readonly string[]): void {
+    this.decorationSelect.replaceChildren()
+    for (const d of decorations) {
+      const opt = document.createElement('option')
+      opt.value = d
+      opt.textContent = d || 'no decoration'
+      this.decorationSelect.appendChild(opt)
+    }
+    this.labelChipsEl.replaceChildren()
+    for (const item of labels) {
+      const chip = document.createElement('button')
+      chip.type = 'button'
+      chip.className = 'chip-btn'
+      chip.textContent = item.label
+      chip.title = `Prepend "${item.value}: "`
+      // Don't steal focus from GitHub's comment field on click.
+      chip.addEventListener('mousedown', (e) => e.preventDefault())
+      chip.addEventListener('click', () => this.onApplyLabel?.(item, this.decorationSelect.value))
+      this.labelChipsEl.appendChild(chip)
+    }
+  }
+
   flashTray(message: string, ok = true): void {
     this.trayStatusEl.innerHTML = `${icon(ok ? 'check' : 'alert', 12)}<span>${message}</span>`
     this.trayStatusEl.style.color = ok ? 'var(--success)' : 'var(--danger)'
@@ -305,12 +374,38 @@ export class DockPanel {
     this.trayTimer = window.setTimeout(() => this.trayStatusEl.replaceChildren(), 2000)
   }
 
+  private showAnswerActions(visible: boolean): void {
+    this.answerActionsEl.hidden = !visible
+  }
+
+  /** Load the streamed answer into the composer so the reviewer can edit, then Post. */
+  private useAnswerAsComment(): void {
+    const text = this.rawAnswer.trim()
+    if (!text) return
+    this.inputEl.value = text
+    this.inputEl.focus()
+    this.inputEl.selectionStart = this.inputEl.selectionEnd = text.length
+    this.inputEl.scrollIntoView({ block: 'nearest' })
+    this.flashTray('Loaded — edit, then Post to line')
+  }
+
+  private copyAnswer(): void {
+    const text = this.rawAnswer.trim()
+    if (!text) return
+    void navigator.clipboard?.writeText(text).then(
+      () => this.flashTray('Copied'),
+      () => this.flashTray('Copy failed', false),
+    )
+  }
+
   // ── ask lifecycle ──────────────────────────────────────────────────
   startAnswer(): void {
     this.streaming = true
     this.askBtn.disabled = true
+    this.suggestBtn.disabled = true
     this.host.removeAttribute('collapsed')
     this.rawAnswer = ''
+    this.showAnswerActions(false)
     this.answerEl.className = 'answer'
     this.answerEl.innerHTML = `<div class="status-row spinner">${icon('spinner', 15)}<span>Thinking…</span></div>`
   }
@@ -324,16 +419,21 @@ export class DockPanel {
   finishAnswer(): void {
     this.streaming = false
     this.askBtn.disabled = false
+    this.suggestBtn.disabled = false
     if (!this.rawAnswer.trim()) {
       this.answerEl.className = 'answer placeholder'
       this.answerEl.textContent = '(no response)'
+    } else {
+      this.showAnswerActions(true)
     }
   }
 
   showError(message: string): void {
     this.streaming = false
     this.askBtn.disabled = false
+    this.suggestBtn.disabled = false
     this.host.removeAttribute('collapsed')
+    this.showAnswerActions(false)
     this.answerEl.className = 'answer'
     this.answerEl.innerHTML = `<div class="status-row error">${icon('alert', 16)}<span></span></div>`
     this.answerEl.querySelector('span')!.textContent = message
@@ -342,6 +442,7 @@ export class DockPanel {
   // ── post lifecycle ─────────────────────────────────────────────────
   postPending(): void {
     this.host.removeAttribute('collapsed')
+    this.showAnswerActions(false)
     this.postBtn.disabled = true
     this.postStatusEl.className = 'post-status'
     this.postStatusEl.innerHTML = `<span class="spinner">${icon('spinner', 13)}</span><span class="label">Posting…</span>`
@@ -351,6 +452,7 @@ export class DockPanel {
     this.postBtn.disabled = false
     this.postStatusEl.replaceChildren()
     this.host.removeAttribute('collapsed')
+    this.showAnswerActions(false)
     this.answerEl.className = 'answer'
     this.answerEl.innerHTML =
       `<div class="status-row ok">${icon('check', 16)}<span>Comment posted — </span>` +

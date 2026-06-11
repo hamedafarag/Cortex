@@ -13,6 +13,9 @@ export type IconName =
   | 'alert'
   | 'spinner'
   | 'code'
+  | 'copy'
+  | 'wand'
+  | 'tag'
 
 const PATHS: Record<IconName, string> = {
   // A small synapse / node cluster — the Cortex mark.
@@ -35,6 +38,16 @@ const PATHS: Record<IconName, string> = {
   alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   spinner: '<path d="M21 12a9 9 0 1 1-6.2-8.6"/>',
   code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
+  copy:
+    '<rect x="9" y="9" width="11" height="11" rx="2"/>' +
+    '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  // A magic wand with a sparkle — "suggest a fix".
+  wand:
+    '<path d="m21.6 3.6-1.2-1.2a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.8l1.2 1.2a1.2 1.2 0 0 0 1.8 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8Z"/>' +
+    '<path d="m14 7 3 3"/><path d="M5 6v4M3 8h4"/>',
+  tag:
+    '<path d="M12.6 2.6 21 11a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6Z"/>' +
+    '<circle cx="7.5" cy="7.5" r="1.1"/>',
 }
 
 export function icon(name: IconName, size = 16): string {

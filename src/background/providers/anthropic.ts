@@ -10,34 +10,18 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { AskRequest, Chunk } from '../../shared/types'
 import { getSettings } from '../../shared/storage'
+import { buildUserContent } from '../../shared/prompt'
 import type { LlmProvider } from './types'
 
 const SYSTEM_PROMPT = [
   'You are an expert code reviewer assisting a human reviewer inside a GitHub pull request.',
   'The reviewer highlights code in the diff and asks questions about it. Answer concisely',
-  'and concretely, grounded in the provided code and diff. When you spot bugs, risks, or',
-  'clearly better approaches, say so plainly. Use GitHub-flavored markdown. If the provided',
-  'context is insufficient to answer confidently, say what else you would need rather than',
-  'guessing.',
+  'and concretely, grounded in the provided code and diff. Use any PR title/description to',
+  'judge whether the change does what it claims, not just whether it is locally correct.',
+  'When you spot bugs, risks, or clearly better approaches, say so plainly. Use',
+  'GitHub-flavored markdown. If the provided context is insufficient to answer confidently,',
+  'say what else you would need rather than guessing.',
 ].join(' ')
-
-/** Assemble the per-turn user message: PR/file/line context, the code, then the question. */
-function buildUserContent(req: AskRequest): string {
-  const { context, question } = req
-  const parts: string[] = [`Pull request: ${context.repo} #${context.prNumber}`]
-
-  if (context.file) parts.push(`File: ${context.file}`)
-  if (context.lineRange) parts.push(`Lines: ${context.lineRange[0]}-${context.lineRange[1]}`)
-  if (context.selectedCode) {
-    parts.push(`Selected code:\n\`\`\`${context.language ?? ''}\n${context.selectedCode}\n\`\`\``)
-  }
-  if (context.diffHunk) {
-    parts.push(`Surrounding diff:\n\`\`\`diff\n${context.diffHunk}\n\`\`\``)
-  }
-  parts.push(`Question: ${question}`)
-
-  return parts.join('\n\n')
-}
 
 function buildMessages(req: AskRequest): Anthropic.MessageParam[] {
   const messages: Anthropic.MessageParam[] = (req.history ?? []).map((turn) => ({
