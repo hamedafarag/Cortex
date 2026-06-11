@@ -39,12 +39,9 @@ const STYLES = `
   }
 
   .panel {
-    margin: 0 auto; max-width: 1012px;
     background: var(--bg);
-    border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: 10px 10px 0 0;
-    box-shadow: 0 -1px 0 var(--border-muted), 0 -8px 28px rgba(0,0,0,.16);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 28px rgba(0,0,0,.16);
     overflow: hidden;
     animation: rise .18s cubic-bezier(.2,.7,.3,1);
   }
@@ -83,9 +80,23 @@ const STYLES = `
   }
   .iconbtn:hover { background: var(--bg-inset); color: var(--fg); }
 
+  /* ── launcher (collapsed state) ───────────────────────────────────── */
+  .launcher {
+    display: none;
+    position: absolute; right: 16px; bottom: 16px;
+    width: 48px; height: 48px; padding: 0;
+    border-radius: 50%; place-items: center; cursor: pointer;
+    background: var(--cortex); color: var(--cortex-on);
+    border: 1px solid color-mix(in srgb, var(--cortex) 70%, #000);
+    box-shadow: 0 4px 14px rgba(0,0,0,.28);
+    animation: rise .18s cubic-bezier(.2,.7,.3,1);
+  }
+  .launcher:hover { background: color-mix(in srgb, var(--cortex) 88%, #000) }
+  :host([collapsed]) .launcher { display: grid }
+  :host([collapsed]) .panel { display: none }
+
   /* ── body ─────────────────────────────────────────────────────────── */
   .body { display: flex; flex-direction: column; }
-  :host([collapsed]) .body { display: none }
 
   .answer {
     padding: 14px; overflow-y: auto; min-height: 68px; max-height: 240px;
@@ -192,6 +203,7 @@ function header(): string {
 
 const TEMPLATE = `
   <style>${STYLES}</style>
+  <button class="launcher" type="button" aria-label="Open Cortex review assistant" title="Open Cortex">${icon('logo', 22)}</button>
   <div class="panel">
     ${header()}
     <div class="body">
@@ -241,7 +253,6 @@ export class DockPanel {
   private readonly suggestBtn: HTMLButtonElement
   private readonly postBtn: HTMLButtonElement
   private readonly postStatusEl: HTMLSpanElement
-  private readonly toggleEl: HTMLButtonElement
   private readonly trayChipsEl: HTMLSpanElement
   private readonly trayStatusEl: HTMLSpanElement
   private readonly labelChipsEl: HTMLSpanElement
@@ -253,6 +264,7 @@ export class DockPanel {
   constructor() {
     this.host = document.createElement('div')
     this.host.setAttribute('data-ycra-dock', '')
+    this.host.setAttribute('collapsed', '') // start as the launcher button; expand on click
     this.root = this.host.attachShadow({ mode: 'open' })
     this.root.innerHTML = TEMPLATE
 
@@ -265,7 +277,6 @@ export class DockPanel {
     this.suggestBtn = this.root.querySelector('.btn.suggest')!
     this.postBtn = this.root.querySelector('.btn.post')!
     this.postStatusEl = this.root.querySelector('.post-status')!
-    this.toggleEl = this.root.querySelector('.toggle')!
     this.trayChipsEl = this.root.querySelector('.tray-chips')!
     this.trayStatusEl = this.root.querySelector('.tray-status')!
     this.labelChipsEl = this.root.querySelector('.label-chips')!
@@ -276,6 +287,7 @@ export class DockPanel {
       if ((e.target as HTMLElement).closest('.chip')) return
       this.toggleCollapsed()
     })
+    this.root.querySelector('.launcher')!.addEventListener('click', () => this.toggleCollapsed())
     this.askBtn.addEventListener('click', () => this.submit())
     this.suggestBtn.addEventListener('click', () => {
       if (!this.streaming) this.onSuggest?.()
@@ -310,9 +322,9 @@ export class DockPanel {
     parent.appendChild(this.host)
   }
 
+  /** Toggle between the full-width dock and the collapsed launcher button. */
   private toggleCollapsed(): void {
-    const collapsed = this.host.toggleAttribute('collapsed')
-    this.toggleEl.innerHTML = icon(collapsed ? 'chevronUp' : 'chevronDown', 16)
+    this.host.toggleAttribute('collapsed')
   }
 
   private submit(): void {

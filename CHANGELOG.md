@@ -25,6 +25,12 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   blocking / if-minor) and prepends it to the focused comment box, so review notes read
   clearly as blocking, optional, or FYI. (Phase 3a)
 
+### Changed
+- **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated
+  over GitHub's content, the dock now starts as a small Cortex button (bottom-right). Click it
+  to expand the **full-width** dock; collapse back to the button when done. Fixes the expanded
+  dock hiding the comment box / page content behind it.
+
 ## [0.1.0] — 2026-06-11
 
 First feature-complete build — Phases 0 · 1 · 1b · 2 · 2.5.
