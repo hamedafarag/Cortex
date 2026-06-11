@@ -8,6 +8,7 @@ const byId = <T extends HTMLElement>(id: string): T => document.getElementById(i
 const providerEl = byId<HTMLSelectElement>('provider')
 const apiKeyEl = byId<HTMLInputElement>('apiKey')
 const modelEl = byId<HTMLSelectElement>('model')
+const githubPatEl = byId<HTMLInputElement>('githubPat')
 const apiKeyField = byId<HTMLDivElement>('apiKeyField')
 const statusEl = byId<HTMLDivElement>('status')
 
@@ -33,6 +34,7 @@ async function init(): Promise<void> {
   providerEl.value = settings.provider
   apiKeyEl.value = settings.anthropicApiKey
   modelEl.value = settings.model
+  githubPatEl.value = settings.githubPat
   syncApiKeyRelevance()
 
   providerEl.addEventListener('change', () => {
@@ -40,8 +42,9 @@ async function init(): Promise<void> {
     void save({ provider: providerEl.value as Settings['provider'] })
   })
   modelEl.addEventListener('change', () => void save({ model: modelEl.value }))
-  // Save the key on commit (blur/Enter), not per keystroke.
+  // Save secrets on commit (blur/Enter), not per keystroke.
   apiKeyEl.addEventListener('change', () => void save({ anthropicApiKey: apiKeyEl.value.trim() }))
+  githubPatEl.addEventListener('change', () => void save({ githubPat: githubPatEl.value.trim() }))
 }
 
 void init()

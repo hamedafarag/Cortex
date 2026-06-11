@@ -78,18 +78,23 @@ const STYLES = `
   }
   .chip-btn:hover { background: #eaeef2; }
   .tray-status { font-size: 11px; color: #1a7f37; margin-left: auto; }
-  .composer { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid #d0d7de; }
+  .composer { display: flex; flex-direction: column; gap: 8px; padding: 8px 12px; border-top: 1px solid #d0d7de; }
   textarea {
-    flex: 1; resize: none; min-height: 36px; max-height: 120px;
+    resize: none; min-height: 36px; max-height: 120px;
     padding: 6px 8px; border: 1px solid #d0d7de; border-radius: 6px;
     font: inherit; color: inherit;
   }
-  button {
-    align-self: flex-end; padding: 6px 14px; border: 1px solid rgba(31,35,40,.15);
-    border-radius: 6px; background: #1f883d; color: #fff; font: inherit;
-    font-weight: 600; cursor: pointer;
+  .composer-actions { display: flex; align-items: center; gap: 8px; }
+  .post-status { font-size: 11px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .post-status a { color: #1a7f37; font-weight: 600; text-decoration: none; }
+  .post-status.error { color: #cf222e; }
+  .composer button {
+    padding: 6px 14px; border: 1px solid rgba(31,35,40,.15); border-radius: 6px;
+    font: inherit; font-weight: 600; cursor: pointer;
   }
-  button:disabled { opacity: .55; cursor: default; }
+  .composer button:disabled { opacity: .55; cursor: default; }
+  .composer .ask { background: #1f883d; color: #fff; }
+  .composer .post { background: #f6f8fa; color: #1f2328; }
 `
 
 const TEMPLATE = `
@@ -109,8 +114,12 @@ const TEMPLATE = `
         <span class="tray-status"></span>
       </div>
       <div class="composer">
-        <textarea placeholder="Ask about the selected code…" rows="1"></textarea>
-        <button type="button">Ask</button>
+        <textarea placeholder="Ask about the code, or type a comment to post…" rows="1"></textarea>
+        <div class="composer-actions">
+          <span class="post-status"></span>
+          <button type="button" class="ask">Ask</button>
+          <button type="button" class="post" title="Post the text above as a review comment on the selected line">Post to line</button>
+        </div>
       </div>
     </div>
   </div>
@@ -123,12 +132,16 @@ export class DockPanel {
   onSubmit: ((question: string) => void) | null = null
   /** Called when the user clicks a canned-comment chip. */
   onInsertComment: ((body: string) => void) | null = null
+  /** Called when the user clicks "Post to line" with the composer text. */
+  onPost: ((text: string) => void) | null = null
 
   private readonly root: ShadowRoot
   private readonly answerEl: HTMLDivElement
   private readonly chipEl: HTMLSpanElement
   private readonly inputEl: HTMLTextAreaElement
   private readonly askBtn: HTMLButtonElement
+  private readonly postBtn: HTMLButtonElement
+  private readonly postStatusEl: HTMLSpanElement
   private readonly toggleEl: HTMLSpanElement
   private readonly trayChipsEl: HTMLSpanElement
   private readonly trayStatusEl: HTMLSpanElement
@@ -146,13 +159,19 @@ export class DockPanel {
     this.answerEl = this.root.querySelector('.answer')!
     this.chipEl = this.root.querySelector('.chip')!
     this.inputEl = this.root.querySelector('textarea')!
-    this.askBtn = this.root.querySelector('.composer button')!
+    this.askBtn = this.root.querySelector('.composer .ask')!
+    this.postBtn = this.root.querySelector('.composer .post')!
+    this.postStatusEl = this.root.querySelector('.post-status')!
     this.toggleEl = this.root.querySelector('.toggle')!
     this.trayChipsEl = this.root.querySelector('.tray-chips')!
     this.trayStatusEl = this.root.querySelector('.tray-status')!
 
     this.root.querySelector('.header')!.addEventListener('click', () => this.toggleCollapsed())
     this.askBtn.addEventListener('click', () => this.submit())
+    this.postBtn.addEventListener('click', () => {
+      const text = this.inputEl.value.trim()
+      if (text) this.onPost?.(text)
+    })
     this.inputEl.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
@@ -223,6 +242,31 @@ export class DockPanel {
     this.trayTimer = window.setTimeout(() => {
       this.trayStatusEl.textContent = ''
     }, 1800)
+  }
+
+  /** Posting lifecycle feedback next to the "Post to line" button. */
+  postPending(): void {
+    this.postBtn.disabled = true
+    this.postStatusEl.classList.remove('error')
+    this.postStatusEl.textContent = 'Posting…'
+  }
+
+  postDone(url: string): void {
+    this.postBtn.disabled = false
+    this.postStatusEl.classList.remove('error')
+    this.postStatusEl.replaceChildren()
+    const link = document.createElement('a')
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    link.textContent = '✓ Comment posted'
+    this.postStatusEl.appendChild(link)
+  }
+
+  postFailed(message: string): void {
+    this.postBtn.disabled = false
+    this.postStatusEl.classList.add('error')
+    this.postStatusEl.textContent = `✗ ${message}`
   }
 
   /** Begin a fresh streamed answer. */

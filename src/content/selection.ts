@@ -4,11 +4,15 @@
 // degrade gracefully — GitHub's diff markup changes between UI versions, and the
 // authoritative file/diff content comes from the GitHub API in Phase 2.
 
+export type DiffSide = 'LEFT' | 'RIGHT'
+
 export interface SelectionContext {
   selectedCode: string
   file?: string
   lineRange?: [number, number]
   language?: string
+  /** Single line to anchor a posted review comment to (the end of the selection). */
+  anchor?: { line: number; side: DiffSide }
 }
 
 const EXT_LANG: Record<string, string> = {
@@ -47,13 +51,23 @@ function findFilePath(start: Element | null): string | undefined {
   return undefined
 }
 
-function lineNumberOf(cell: Element | undefined | null): number | undefined {
-  const n = Number(cell?.getAttribute('data-line-number'))
-  return Number.isFinite(n) ? n : undefined
+interface LineInfo {
+  line: number
+  side: DiffSide
 }
 
-/** Find the diff line number for a node, preferring the right (new) side of the diff. */
-function lineNumberNear(node: Node | null): number | undefined {
+function lineInfoOf(cell: Element | undefined | null): LineInfo | undefined {
+  if (!cell) return undefined
+  const n = Number(cell.getAttribute('data-line-number'))
+  if (!Number.isFinite(n)) return undefined
+  // Missing data-diff-side is treated as the right (new) side — the common case.
+  const side: DiffSide =
+    cell.getAttribute('data-diff-side')?.toLowerCase() === 'left' ? 'LEFT' : 'RIGHT'
+  return { line: n, side }
+}
+
+/** Diff line + side near a node, preferring the right (new) side. */
+function lineInfoNear(node: Node | null): LineInfo | undefined {
   const el = asElement(node)
   const row = el?.closest('tr, [role="row"]')
   const cells: Element[] = row
@@ -67,21 +81,21 @@ function lineNumberNear(node: Node | null): number | undefined {
   const right = cells.find(
     (c) => c.getAttribute('data-diff-side')?.toLowerCase() === 'right',
   )
-  const rightNum = lineNumberOf(right)
-  if (rightNum !== undefined) return rightNum
+  const rightInfo = lineInfoOf(right)
+  if (rightInfo) return rightInfo
 
-  // Fall back to the highest line number present in the row.
-  let best: number | undefined
+  // Fall back to the highest-numbered cell in the row.
+  let best: LineInfo | undefined
   for (const c of cells) {
-    const n = lineNumberOf(c)
-    if (n !== undefined) best = best === undefined ? n : Math.max(best, n)
+    const info = lineInfoOf(c)
+    if (info && (!best || info.line > best.line)) best = info
   }
   return best
 }
 
 function findLineRange(range: Range): [number, number] | undefined {
-  const a = lineNumberNear(range.startContainer)
-  const b = lineNumberNear(range.endContainer)
+  const a = lineInfoNear(range.startContainer)?.line
+  const b = lineInfoNear(range.endContainer)?.line
   if (a === undefined && b === undefined) return undefined
   const lo = Math.min(a ?? b!, b ?? a!)
   const hi = Math.max(a ?? b!, b ?? a!)
@@ -97,10 +111,12 @@ export function captureSelection(): SelectionContext | null {
 
   const range = sel.getRangeAt(0)
   const file = findFilePath(asElement(range.startContainer))
+  const anchor = lineInfoNear(range.endContainer) ?? lineInfoNear(range.startContainer)
   return {
     selectedCode,
     file,
     lineRange: findLineRange(range),
     language: languageFor(file),
+    anchor,
   }
 }

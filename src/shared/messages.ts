@@ -98,3 +98,29 @@ export type HostToBackground =
   | NativeChunkMessage
   | NativeDoneMessage
   | NativeErrorMessage
+
+// ---------------------------------------------------------------------------
+// 3. Content script <-> background: one-shot GitHub operations (request/response)
+// ---------------------------------------------------------------------------
+
+/** content -> background: post a line-anchored review comment via the GitHub API. */
+export interface PostCommentMessage {
+  type: 'GH_POST_COMMENT'
+  repo: string
+  prNumber: number
+  body: string
+  path: string
+  /** Line number in the file on `side` of the diff. */
+  line: number
+  side: 'LEFT' | 'RIGHT'
+}
+
+export type GithubRequest = PostCommentMessage
+
+/** background -> content: result of a GitHub operation. */
+export interface GithubResult {
+  ok: boolean
+  /** HTML URL of the created comment, on success. */
+  url?: string
+  error?: string
+}

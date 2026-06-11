@@ -16,7 +16,11 @@ export default defineManifest({
   description: 'In-page AI copilot for reviewing GitHub pull requests.',
 
   permissions: ['storage', 'nativeMessaging'],
-  host_permissions: ['https://github.com/*', 'https://api.anthropic.com/*'],
+  host_permissions: [
+    'https://github.com/*',
+    'https://api.anthropic.com/*',
+    'https://api.github.com/*',
+  ],
 
   background: {
     service_worker: 'src/background/index.ts',

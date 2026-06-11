@@ -57,6 +57,16 @@
       </select>
     </div>
 
+    <div class="field">
+      <label for="githubPat">GitHub token <span class="hint" style="font-weight: 400">(optional — for posting comments)</span></label>
+      <input id="githubPat" type="password" placeholder="github_pat_… or ghp_…" autocomplete="off" spellcheck="false" />
+      <div class="hint">
+        A fine-grained PAT with <strong>Pull requests: Read and write</strong> (or a classic
+        token with <code>repo</code> scope) lets the dock post line-anchored review comments
+        to your PRs. Stored locally; never synced.
+      </div>
+    </div>
+
     <div class="notice">
       ⚠️ Highlighted code is sent to Anthropic to answer your questions. Don't use it on
       code you aren't permitted to share externally.

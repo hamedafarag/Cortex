@@ -8,11 +8,14 @@ import {
   PORT_NAME,
   type ContentToBackground,
   type BackgroundToContent,
+  type GithubRequest,
+  type GithubResult,
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
 import { registry, NoProviderAvailableError } from './providers/registry'
 import { AnthropicProvider } from './providers/anthropic'
 import { ClaudeCodeProvider } from './providers/claudeCode'
+import { getPullHeadSha, createReviewComment } from './github/api'
 
 console.debug('[YCRA] background service worker loaded')
 
@@ -82,4 +85,28 @@ chrome.runtime.onConnect.addListener((port) => {
     for (const controller of inFlight.values()) controller.abort()
     inFlight.clear()
   })
+})
+
+// One-shot GitHub operations (request/response, not streamed).
+chrome.runtime.onMessage.addListener((message: GithubRequest, _sender, sendResponse) => {
+  if (message?.type !== 'GH_POST_COMMENT') return
+  void (async () => {
+    try {
+      const commitId = await getPullHeadSha(message.repo, message.prNumber)
+      const comment = await createReviewComment(message.repo, message.prNumber, {
+        body: message.body,
+        commit_id: commitId,
+        path: message.path,
+        line: message.line,
+        side: message.side,
+      })
+      sendResponse({ ok: true, url: comment.html_url } satisfies GithubResult)
+    } catch (err) {
+      sendResponse({
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      } satisfies GithubResult)
+    }
+  })()
+  return true // keep the channel open for the async sendResponse
 })
