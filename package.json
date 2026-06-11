@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "description": "In-page AI copilot for reviewing GitHub pull requests.",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

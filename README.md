@@ -197,5 +197,12 @@ rm ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.ycra.re
 
 ## Roadmap
 
-See [PLAN.md](PLAN.md). Next up: out-of-the-box review comments (Phase 1b) and GitHub API
-integration for posting line-anchored comments (Phase 2).
+Phases 0 · 1 · 1b · 2 · 2.5 are complete (see [PLAN.md](PLAN.md) and
+[CHANGELOG.md](CHANGELOG.md)). Next up — **Phase 3**: whole-PR review, threaded follow-ups
+per selection, and severity-tagged findings.
+
+---
+
+## License
+
+[MIT](LICENSE) © Hamed Farag.
