@@ -39,7 +39,8 @@ a native-messaging host). No third-party SaaS. GitHub-only.
   registers it.
 - `manifest.config.ts` — CRXJS MV3 manifest (fixed `key` → stable ext id `cafladk…`).
 
-Full architecture in `DESIGN.md`; roadmap/status in `PLAN.md`; market in `COMPETITORS.md`.
+Full architecture in `DESIGN.md`; roadmap/status in `PLAN.md`; market in `COMPETITORS.md`;
+review-feature catalog (gap vs planned, effort/impact) in `FEATURE-LANDSCAPE.md`.
 
 ## Conventions
 

@@ -90,12 +90,64 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ---
 
-## Phase 3 — Advanced review
+## Phase 3 — From answer to action
 
-- [ ] Whole-file / whole-PR review summary
-- [ ] Per-selection threaded follow-ups (conversation `history`)
-- [ ] Severity tags on findings
-- [ ] Persist conversation per PR
+Reframed after a review-tooling landscape survey (CodeRabbit, Greptile, Qodo Merge,
+Sourcery, Conventional Comments, Reviewdog, Codecov, …) — full catalog with per-feature
+exemplars + effort/impact in [FEATURE-LANDSCAPE.md](FEATURE-LANDSCAPE.md). The finding: the highest-leverage
+work is **not net-new infrastructure** but unlocking value already latent in the code — the
+GitHub post pipeline, and the under-fed `AskRequest.context` / `history` fields. The
+through-line: **make the AI's output land in the PR as real, well-labeled review comments.**
+Still reviewer-driven, on demand, never autonomous.
+
+### 3a. Quick wins — harvest what's already wired (low effort, high impact)
+- [ ] **Answer → "Post as comment" bridge** — a button under the answer that posts the
+  rendered answer through the existing `GH_POST_COMMENT → createReviewComment` path +
+  remembered anchor. Closes the product's biggest friction loop: today the answer area and
+  the post textarea are separate, forcing a retype.
+- [ ] **PR intent context injection** — read `pr.title` / `pr.body` from the `GET /pulls/{n}`
+  call already made for the head sha; add them to the existing `AskRequest.context` + system
+  prompt so the AI can judge *"does this do what the PR says?"*, not just local correctness.
+- [ ] **Committable `suggestion` blocks** — a "Suggest a fix" action: ask the model for the
+  replacement lines only, wrap them in a triple-backtick `suggestion` fence, post via the
+  existing comment path (no new API). Anchor to the exact selected lines → one-click apply.
+- [ ] **Conventional Comments picker** — upgrade the canned tray to a label
+  (praise / nit / suggestion / issue / question / thought / chore) + decoration
+  (blocking / non-blocking / if-minor) picker that composes a `label [decoration]:` prefix
+  onto a canned or typed body. Pure string composition over the existing insert path.
+- [ ] **Threaded follow-ups** — wire the already-defined `AskRequest.history` end-to-end
+  (dock accumulates turns; content script populates `history` on submit). Both providers
+  already forward it — only the dock/content wiring is missing.
+
+### 3b. On-demand review depth
+- [ ] **Whole-file / whole-PR review** — feed the full file patch (not one hunk) / all file
+  patches and return a findings list; each finding promotable to a comment via 3a.
+- [ ] **AI PR summary** — a "Summarize PR" button: stream a TL;DR + key changes from the file
+  patches into the answer area. Fold in a per-file one-line gloss and a 1–5 effort badge.
+- [ ] **Severity tags on findings** — structured label per finding, rendered icon + label
+  (color-blind-safe), for blocker-vs-nit triage.
+- [ ] **Specialist lenses** — preset Security / Performance / Error-handling / Readability
+  buttons that scope the system prompt for one turn (prompt templating over the ask path).
+- [ ] **Test-gap call-out** — a heuristic "which changed source files have no matching test
+  changes?" pass over the file list (tests detected by path). An approximation, not coverage.
+
+### 3c. Persistence & trust
+- [ ] **Persist per PR** — store conversation turns + draft comments keyed by
+  `repo#prNumber` in `chrome.storage.local`; restore on mount.
+- [ ] **Confirm / undo before posting** — posting is a real public write (see Safety): add a
+  confirm affordance, or a post-then-Undo window (`DELETE /pulls/comments/{id}`).
+- [ ] **Secret redaction** — mask obvious secrets (key patterns / high-entropy strings) in the
+  selection before it leaves the browser; show a notice in the dock when something was
+  redacted. Strengthens the "your key, no third-party SaaS" trust story.
+
+### Deferred / out of scope (decided, not forgotten)
+- [ ] **Batch / pending review + review verdict** (Approve / Request changes) — requires
+  migrating from standalone comments to the Reviews API (`POST /pulls/{n}/reviews` with a
+  `comments[]` array + submit `event`). Real value for high-volume reviewers but the heaviest
+  item here — defer until 3a/3b are solid, and gate the verdict behind explicit user action.
+- ~~Mark-as-viewed / file-progress tracking~~ — **skip:** GitHub ships per-file "Viewed" with
+  a progress bar natively; reimplementing it fights GitHub's DOM for low marginal value.
+- ~~Autonomous auto-review (bot mode)~~ — **skip:** against Cortex's human-in-the-loop identity.
 
 ---
 
