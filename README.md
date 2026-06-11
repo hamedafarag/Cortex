@@ -22,14 +22,21 @@ third-party server.
 
 ## Features
 
-- **Ask about highlighted code** — select code in a PR diff, ask, get a streamed answer
-  grounded in the file/lines/diff context.
+- **Ask about highlighted code** — select code in a PR diff, ask, and get a streamed,
+  markdown-rendered answer grounded in the **authoritative diff hunk** (fetched from the
+  GitHub API, not just the scraped DOM).
 - **Two interchangeable backends** behind one interface, with automatic fallback:
   - **Anthropic API** — your own API key, billed to your account.
-  - **Claude Code CLI** — your Claude subscription, through a local native-messaging host
-    that shells out to the `claude` CLI (no API key needed).
-- **Markdown rendering** of answers (code blocks, lists, etc.), sanitized.
-- **Style-isolated dock** (shadow DOM) that doesn't fight GitHub's own keyboard shortcuts.
+  - **Claude Code CLI** — your Claude subscription, via a local native-messaging host that
+    shells out to the `claude` CLI (no API key needed).
+- **Out-of-the-box comments** — insert canned review snippets (Nit, Needs test, …) into
+  GitHub's comment box.
+- **Post line-anchored review comments** straight to the PR via your own GitHub token.
+- **Native, adaptive UI** — the dock inherits GitHub's light/dark theme so it feels
+  built-in; sharp Cortex identity, line icons, loading states, and **color-blind-safe**
+  status (icon + label, never colour alone).
+- **Local & private** — keys/token live only in your browser; code goes only to Anthropic
+  (your account) and `api.github.com` (your token). No third-party SaaS.
 
 ---
 
@@ -158,15 +165,19 @@ the Vite server stops** (it can't reach `localhost:5173`). For stable testing, p
 
 ```
 src/
-  background/         service worker: port router + provider registry
+  background/         service worker: port router, provider registry, GitHub ops
     providers/        LlmProvider interface, registry, anthropic.ts, claudeCode.ts
+    github/           api.ts — head sha, files/patch (diff grounding), post comment
   content/            injected on PR pages
-    dock/             the dock panel (plain <div> + shadow root)
-    selection.ts      selection → {file, lineRange, code, language}
-  options/            options page (backend, key, model)
+    dock/             dock-panel.ts (plain <div> + shadow root) + icons.ts
+    selection.ts      selection → {file, lineRange, side, code, language}
+    comments.ts       canned comments + insert into GitHub's comment box
+  options/            options page (backend, key, model, PAT, About)
   shared/             types, message protocols, settings storage
 native-host/          reviewer-host.mjs (native messaging) + install.sh
-manifest.config.ts    MV3 manifest (CRXJS) with the fixed key
+public/icons/         icon.svg + generated PNGs (npm run icons)
+scripts/gen-icons.mjs SVG → PNG icon generator
+manifest.config.ts    MV3 manifest (CRXJS) with the fixed key + icons
 ```
 
 ---

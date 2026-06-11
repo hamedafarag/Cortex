@@ -259,41 +259,39 @@ bg → content: { type: 'ERROR', id, message }
 ## 12. Project structure (Vite + CRXJS + TS)
 
 ```
-YourCodeReviewAssistant/
-├─ DESIGN.md
-├─ package.json
-├─ tsconfig.json
-├─ vite.config.ts
-├─ manifest.config.ts          # CRXJS manifest (MV3, with fixed "key")
-├─ public/icons/
+YourCodeReviewAssistant/          # repo dir (product name: Cortex)
+├─ README.md · DESIGN.md · PLAN.md · COMPETITORS.md
+├─ package.json · tsconfig.json · vite.config.ts
+├─ manifest.config.ts          # CRXJS MV3 manifest (fixed "key", icons)
+├─ scripts/gen-icons.mjs        # SVG → PNG icon generator (npm run icons)
+├─ public/icons/                # icon.svg + icon-{16,32,48,128}.png
 ├─ src/
 │  ├─ background/
-│  │  ├─ index.ts              # service worker: port router
+│  │  ├─ index.ts              # service worker: port router + GitHub message handler
 │  │  ├─ providers/
-│  │  │  ├─ types.ts           # LlmProvider, AskRequest, Chunk
+│  │  │  ├─ types.ts           # LlmProvider
 │  │  │  ├─ registry.ts        # active provider + fallback
 │  │  │  ├─ anthropic.ts       # Provider A
 │  │  │  └─ claudeCode.ts      # Provider B (native-host client)
 │  │  └─ github/
-│  │     └─ api.ts             # PR files/patch fetch (Phase 2)
+│  │     └─ api.ts             # head sha, files/patch (diff grounding), post comment
 │  ├─ content/
-│  │  ├─ index.ts              # injected on PR pages
+│  │  ├─ index.ts              # injected on PR pages; tracks selection; ask/post
 │  │  ├─ dock/
-│  │  │  ├─ dock-panel.ts      # <dock-panel> custom element
-│  │  │  └─ dock.css           # styles inlined into shadow root
-│  │  ├─ selection.ts          # selection → file/line/code
-│  │  └─ comments.ts           # canned-comment insertion (Phase 1b)
+│  │  │  ├─ dock-panel.ts      # the dock (plain <div> + shadow root; styles inline)
+│  │  │  └─ icons.ts           # inline SVG line icons
+│  │  ├─ selection.ts          # selection → file/line/side/code
+│  │  └─ comments.ts           # canned comments + GitHub-box insertion
 │  ├─ options/
 │  │  ├─ options.html
-│  │  └─ options.ts            # provider toggle, key, PAT, model
+│  │  └─ options.ts            # backend, key, model, PAT, About
 │  └─ shared/
-│     ├─ messages.ts           # port + native protocol types
+│     ├─ types.ts              # AskContext/AskRequest/Chunk/ProviderId
+│     ├─ messages.ts           # port + native + GitHub protocol types
 │     └─ storage.ts            # settings get/set
-└─ native-host/                # NOT bundled by Vite — shipped separately
-   ├─ reviewer-host.js         # Node host
-   ├─ manifest.template.json
-   ├─ install.sh
-   └─ install.ps1
+└─ native-host/                # NOT bundled by Vite — installed separately
+   ├─ reviewer-host.mjs        # Node native-messaging host (lean claude -p)
+   └─ install.sh               # registers the host (Edge/Chrome/Chromium/Brave)
 ```
 
 ---
