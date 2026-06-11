@@ -1,5 +1,9 @@
 # Your Code Review Assistant
 
+**A local developer-experience tool that turns the Claude subscription (or API key) you
+already pay for into an in-PR review assistant — no SaaS middleman, no second subscription,
+no per-token surprise bill.**
+
 A browser extension (Manifest V3) that gives you an in-page AI copilot while reviewing
 GitHub pull requests — **without** handing the review off to a third-party bot. You stay
 the reviewer; the extension is your assistant.
@@ -7,10 +11,12 @@ the reviewer; the extension is your assistant.
 Open a PR and a **dock panel** appears at the bottom of the page. Highlight code in the
 diff, ask a question, and get a streamed, markdown-rendered answer. The AI backend is
 pluggable: use the **Anthropic API** (your own key) or the **Claude Code CLI** (your
-existing Claude subscription, via a local native host).
+existing Claude subscription, via a local native host) — your code never goes to a
+third-party server.
 
-> Status: **Phase 1 complete** (GitHub only). See [PLAN.md](PLAN.md) for the roadmap and
-> [DESIGN.md](DESIGN.md) for the architecture.
+> Status: **Phase 1 + 1b complete** (GitHub only). See [PLAN.md](PLAN.md) for the roadmap,
+> [DESIGN.md](DESIGN.md) for the architecture, and [COMPETITORS.md](COMPETITORS.md) for how
+> this sits in the market.
 
 ---
 
