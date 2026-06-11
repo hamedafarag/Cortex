@@ -244,29 +244,35 @@ export class DockPanel {
     }, 1800)
   }
 
-  /** Posting lifecycle feedback next to the "Post to line" button. */
+  // Posting lifecycle. The small status line shows transient progress; the
+  // success link and (often actionable) error message render in the answer area
+  // so the developer can read the whole thing.
   postPending(): void {
+    this.host.removeAttribute('collapsed')
     this.postBtn.disabled = true
-    this.postStatusEl.classList.remove('error')
     this.postStatusEl.textContent = 'Posting…'
   }
 
   postDone(url: string): void {
     this.postBtn.disabled = false
-    this.postStatusEl.classList.remove('error')
-    this.postStatusEl.replaceChildren()
+    this.postStatusEl.textContent = ''
+    this.host.removeAttribute('collapsed')
+    this.answerEl.classList.remove('empty', 'error')
+    this.answerEl.replaceChildren()
+    const label = document.createElement('span')
+    label.textContent = '✓ Comment posted — '
     const link = document.createElement('a')
     link.href = url
     link.target = '_blank'
     link.rel = 'noopener noreferrer'
-    link.textContent = '✓ Comment posted'
-    this.postStatusEl.appendChild(link)
+    link.textContent = 'view on GitHub'
+    this.answerEl.append(label, link)
   }
 
   postFailed(message: string): void {
     this.postBtn.disabled = false
-    this.postStatusEl.classList.add('error')
-    this.postStatusEl.textContent = `✗ ${message}`
+    this.postStatusEl.textContent = ''
+    this.showError(message) // full, wrapping, in the answer area
   }
 
   /** Begin a fresh streamed answer. */
@@ -299,6 +305,7 @@ export class DockPanel {
   showError(message: string): void {
     this.streaming = false
     this.askBtn.disabled = false
+    this.host.removeAttribute('collapsed') // make sure the error is visible
     this.answerEl.classList.remove('empty')
     this.answerEl.classList.add('error')
     this.answerEl.textContent = message
