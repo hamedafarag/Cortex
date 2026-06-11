@@ -73,7 +73,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 - [x] PAT entry in options + storage (`chrome.storage.local`) with security guidance
 - [x] `background/github/api.ts` — PAT-authed client (`getPullHeadSha`, `listPullFiles`, `createReviewComment`)
-- [ ] Use API `patch` as **authoritative** grounding context (reduce DOM dependence) — *deferred; `listPullFiles` is in place for it*
+- [x] Use API `patch` as **authoritative** grounding context — `getDiffHunk` (cached `listPullFiles` + hunk parser) enriches each ask's `diffHunk` in the background (best-effort)
 - [x] Map dock selection → `path` / `line` / `side`; `commit_id` resolved in the background
 - [x] Post line-anchored review comment: `POST /repos/{owner}/{repo}/pulls/{n}/comments` (wiring verified via safe 401; real post needs a PAT)
 

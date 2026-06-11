@@ -70,6 +70,75 @@ export interface CreatedComment {
   html_url: string
 }
 
+// --- Authoritative diff-hunk grounding -----------------------------------------
+
+const filesCache = new Map<string, { at: number; files: PullFile[] }>()
+const FILES_TTL_MS = 60_000
+
+async function getPullFilesCached(repo: string, prNumber: number): Promise<PullFile[]> {
+  const key = `${repo}#${prNumber}`
+  const cached = filesCache.get(key)
+  if (cached && Date.now() - cached.at < FILES_TTL_MS) return cached.files
+  const files = await listPullFiles(repo, prNumber)
+  filesCache.set(key, { at: Date.now(), files })
+  return files
+}
+
+/** Extract the unified-diff hunk that contains `line` (new side first, then old). */
+function findHunk(patch: string, line: number): string | undefined {
+  const headerRe = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
+  interface Hunk {
+    header: string
+    body: string[]
+    oldStart: number
+    oldCount: number
+    newStart: number
+    newCount: number
+  }
+  const hunks: Hunk[] = []
+  let cur: Hunk | null = null
+  for (const l of patch.split('\n')) {
+    const m = headerRe.exec(l)
+    if (m) {
+      if (cur) hunks.push(cur)
+      cur = {
+        header: l,
+        body: [],
+        oldStart: +m[1],
+        oldCount: m[2] ? +m[2] : 1,
+        newStart: +m[3],
+        newCount: m[4] ? +m[4] : 1,
+      }
+    } else if (cur) {
+      cur.body.push(l)
+    }
+  }
+  if (cur) hunks.push(cur)
+
+  const within = (start: number, count: number): boolean =>
+    line >= start && line <= start + Math.max(count, 1) - 1
+  const hunk =
+    hunks.find((h) => within(h.newStart, h.newCount)) ??
+    hunks.find((h) => within(h.oldStart, h.oldCount))
+  if (!hunk) return undefined
+
+  const text = [hunk.header, ...hunk.body].join('\n')
+  return text.length > 4000 ? `${text.slice(0, 4000)}\n… (hunk truncated)` : text
+}
+
+/** The diff hunk containing `line` in `file`, for grounding an ask (or undefined). */
+export async function getDiffHunk(
+  repo: string,
+  prNumber: number,
+  file: string,
+  line: number,
+): Promise<string | undefined> {
+  const patch = (await getPullFilesCached(repo, prNumber)).find(
+    (f) => f.filename === file,
+  )?.patch
+  return patch ? findHunk(patch, line) : undefined
+}
+
 /** Post a line-anchored review comment on the PR diff. */
 export async function createReviewComment(
   repo: string,

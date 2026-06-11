@@ -15,9 +15,28 @@ import type { AskRequest } from '../shared/types'
 import { registry, NoProviderAvailableError } from './providers/registry'
 import { AnthropicProvider } from './providers/anthropic'
 import { ClaudeCodeProvider } from './providers/claudeCode'
-import { getPullHeadSha, createReviewComment } from './github/api'
+import { getPullHeadSha, createReviewComment, getDiffHunk } from './github/api'
 
 console.debug('[YCRA] background service worker loaded')
+
+/** Best-effort: attach the authoritative diff hunk from the GitHub API so the model
+ *  sees the real surrounding change. Silently skipped if unavailable (no PAT, private
+ *  repo, rate limit, file not in the diff). */
+async function enrichWithDiffHunk(request: AskRequest): Promise<void> {
+  const { context } = request
+  if (context.diffHunk || !context.file || !context.lineRange) return
+  try {
+    const hunk = await getDiffHunk(
+      context.repo,
+      context.prNumber,
+      context.file,
+      context.lineRange[0],
+    )
+    if (hunk) context.diffHunk = hunk
+  } catch {
+    // grounding is optional — never fail the ask over it
+  }
+}
 
 // Register available providers; the registry picks one per request from settings.
 registry.register(new AnthropicProvider())
@@ -41,6 +60,8 @@ chrome.runtime.onConnect.addListener((port) => {
     const controller = new AbortController()
     inFlight.set(id, controller)
     try {
+      await enrichWithDiffHunk(request)
+      if (controller.signal.aborted) return
       const { provider } = await registry.resolve()
       for await (const chunk of provider.ask(request, controller.signal)) {
         if (controller.signal.aborted) break
