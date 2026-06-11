@@ -3,103 +3,175 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Your Code Review Assistant — Options</title>
+    <title>Cortex — AI Review Assistant · Options</title>
     <style>
-      :root { color-scheme: light dark; }
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff; --surface: #ffffff; --muted-bg: #f6f8fa; --inset: #eef1f4;
+        --fg: #1f2328; --fg-muted: #59636e; --border: #d1d9e0;
+        --accent: #0969da; --success: #1a7f37; --danger: #d1242f;
+        --cortex: #6b5cf6; --warn-bg: #fff8c5; --warn-bd: #d4a72c66; --tip-bg: #f3f1ff; --tip-bd: #6b5cf64d;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1117; --surface: #151b23; --muted-bg: #151b23; --inset: #212830;
+          --fg: #e6edf3; --fg-muted: #9198a1; --border: #2f3742;
+          --accent: #4493f8; --success: #3fb950; --danger: #f85149;
+          --cortex: #a78bfa; --warn-bg: #2d2200; --warn-bd: #bb800966; --tip-bg: #1b1733; --tip-bd: #a78bfa55;
+        }
+      }
+      * { box-sizing: border-box; }
       body {
         font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        max-width: 560px; margin: 40px auto; padding: 0 20px; color: #1f2328;
+        margin: 0; padding: 40px 20px 64px; color: var(--fg); background: var(--bg);
       }
-      h1 { font-size: 20px; margin-bottom: 4px; }
-      .field { margin: 18px 0; }
+      .wrap { max-width: 620px; margin: 0 auto; }
+
+      header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+      header .mark { color: var(--cortex); display: grid; place-items: center; }
+      header .name { font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 15px; }
+      header .tag { color: var(--fg-muted); font-size: 13px; }
+      .lead { color: var(--fg-muted); font-size: 12px; margin: 0 0 22px; }
+
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin: 14px 0; }
+      .card > h2 { display: flex; align-items: center; gap: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); margin: 0 0 14px; }
+      .card > h2 .icon { color: var(--cortex); }
+
+      .field { margin: 14px 0; }
+      .field:first-of-type { margin-top: 0; }
       label { display: block; font-weight: 600; margin-bottom: 6px; }
       select, input[type="password"], input[type="text"] {
-        width: 100%; padding: 8px; border: 1px solid #d0d7de; border-radius: 6px;
-        font: inherit; box-sizing: border-box;
+        width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
+        font: inherit; color: var(--fg); background: var(--bg); box-sizing: border-box;
       }
-      .hint { font-size: 12px; color: #57606a; margin-top: 4px; }
-      .hint a, .tip a { color: #0969da; }
-      .field.dimmed { opacity: 0.5; }
-      .notice {
-        background: #fff8c5; border: 1px solid rgba(212, 167, 44, 0.4);
-        border-radius: 6px; padding: 10px 12px; font-size: 12px; margin: 20px 0;
-      }
-      .tip {
-        background: #ddf4ff; border: 1px solid rgba(9, 105, 218, 0.3);
-        border-radius: 6px; padding: 10px 12px; font-size: 12px; margin-top: 8px;
-        line-height: 1.5;
-      }
-      .tip ul, .tip ol { margin: 6px 0; padding-left: 18px; }
+      select:focus, input:focus { outline: 2px solid color-mix(in srgb, var(--cortex) 55%, transparent); outline-offset: -1px; border-color: var(--cortex); }
+      .hint { font-size: 12px; color: var(--fg-muted); margin-top: 5px; }
+      .hint a, .tip a, .about a { color: var(--accent); }
+      .field.dimmed { opacity: .5; }
+      code { font-family: var(--mono); font-size: 12px; background: var(--inset); padding: 1px 5px; border-radius: 5px; }
+
+      .notice { background: var(--warn-bg); border: 1px solid var(--warn-bd); border-radius: 8px; padding: 10px 12px; font-size: 12px; margin-top: 14px; }
+      .tip { background: var(--tip-bg); border: 1px solid var(--tip-bd); border-radius: 8px; padding: 11px 13px; font-size: 12px; margin-top: 8px; line-height: 1.55; }
+      .tip ol { margin: 6px 0; padding-left: 18px; }
       .tip li { margin: 2px 0; }
-      .status { font-size: 12px; color: #1a7f37; min-height: 18px; font-weight: 600; }
+
+      .status { position: sticky; bottom: 16px; font-size: 12px; color: var(--success); font-weight: 600; min-height: 18px; display: flex; align-items: center; gap: 6px; }
+
+      .about p { margin: 6px 0; font-size: 13px; }
+      .about .pill { display: inline-block; font-family: var(--mono); font-size: 11px; color: var(--fg-muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+      .about .links { display: flex; gap: 14px; margin-top: 12px; font-size: 13px; }
+      .about .privacy { color: var(--fg-muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
+
+      .icon { vertical-align: -2px; }
     </style>
   </head>
   <body>
-    <h1>Your Code Review Assistant</h1>
-    <p class="hint">
-      Settings are stored locally in this browser (chrome.storage.local) and are not
-      encrypted at rest.
-    </p>
+    <div class="wrap">
+      <header>
+        <span class="mark">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="2.3"/><circle cx="5" cy="6" r="1.4"/><circle cx="19" cy="7" r="1.4"/><circle cx="6.5" cy="18.5" r="1.4"/><circle cx="18" cy="17" r="1.4"/>
+            <path d="M12 12 5.9 6.7M12 12l5.4-3.9M12 12l-4.7 5.5M12 12l4.7 4.2"/>
+          </svg>
+        </span>
+        <div>
+          <div class="name">Cortex</div>
+          <div class="tag">AI Review Assistant</div>
+        </div>
+      </header>
+      <p class="lead">Settings live only in this browser (<code>chrome.storage.local</code>) — not encrypted at rest, never synced.</p>
 
-    <div class="field">
-      <label for="provider">AI backend</label>
-      <select id="provider">
-        <option value="anthropic-api">Anthropic API (your API key)</option>
-        <option value="claude-code-cli">Claude Code CLI (your subscription, via native host)</option>
-      </select>
-      <div class="hint">If the selected backend isn't available, the other is used as a fallback.</div>
-    </div>
+      <!-- AI backend -->
+      <div class="card">
+        <h2>
+          <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.6 4.3L18 9.5l-4.4 1.7L12 15.5l-1.6-4.3L6 9.5l4.4-1.7z"/></svg>
+          AI backend
+        </h2>
 
-    <div class="field" id="apiKeyField">
-      <label for="apiKey">Anthropic API key</label>
-      <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
-      <div class="hint">Used for the Anthropic API backend. Stored locally; never synced across machines.</div>
-    </div>
+        <div class="field">
+          <label for="provider">Provider</label>
+          <select id="provider">
+            <option value="anthropic-api">Anthropic API (your API key)</option>
+            <option value="claude-code-cli">Claude Code CLI (your subscription, via native host)</option>
+          </select>
+          <div class="hint">If the selected backend isn't available, the other is used as a fallback.</div>
+        </div>
 
-    <div class="field">
-      <label for="model">Model</label>
-      <select id="model">
-        <option value="claude-opus-4-8">Claude Opus 4.8 — most capable</option>
-        <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — faster, cheaper</option>
-        <option value="claude-haiku-4-5">Claude Haiku 4.5 — fastest</option>
-      </select>
-    </div>
+        <div class="field" id="apiKeyField">
+          <label for="apiKey">Anthropic API key</label>
+          <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
+          <div class="hint">Used for the Anthropic API backend. Stored locally; never synced.</div>
+        </div>
 
-    <div class="field">
-      <label for="githubPat">GitHub token <span class="hint" style="font-weight: 400">(optional — for posting comments)</span></label>
-      <input id="githubPat" type="password" placeholder="github_pat_… or ghp_…" autocomplete="off" spellcheck="false" />
-      <div class="hint">
-        Lets the dock post line-anchored review comments to your PRs. Comments are posted
-        <strong>as you</strong>. The token is stored only in this browser
-        (<code>chrome.storage.local</code>) — <strong>not encrypted at rest</strong>, never
-        synced, and sent only to <code>api.github.com</code> (no third party).
+        <div class="field">
+          <label for="model">Model</label>
+          <select id="model">
+            <option value="claude-opus-4-8">Claude Opus 4.8 — most capable</option>
+            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — faster, cheaper</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 — fastest</option>
+          </select>
+        </div>
+
+        <div class="notice">
+          ⚠️ Highlighted code is sent to Anthropic to answer your questions. Don't use it on
+          code you aren't permitted to share externally.
+        </div>
       </div>
-      <div class="tip">
-        <strong>Recommended: a
-        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">fine-grained token</a></strong>
-        (smallest blast radius). When creating it:
-        <ol>
-          <li><strong>Resource owner</strong> → the <strong>organization</strong> that owns the repos — <em>not</em> your personal account</li>
-          <li><strong>Repository access</strong> → <em>Only select repositories</em> → the repos you review</li>
-          <li><strong>Permissions → Pull requests: Read and write</strong> — nothing else</li>
-        </ol>
-        <strong>Org gate:</strong> for org repos the org must allow fine-grained tokens and
-        may need an <strong>owner to approve</strong> the token (it stays <em>pending</em>
-        until then). If posting returns <strong>404</strong>, that's the cause.
-        <br /><br />
-        A classic token with the <code>repo</code> scope also works (for SSO orgs, click
-        <em>Configure SSO → Authorize</em> on the token) but can touch <em>every</em> repo
-        you can access. Revoke anytime in
-        <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">GitHub → Developer settings</a>.
+
+      <!-- GitHub -->
+      <div class="card">
+        <h2>
+          <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>
+          GitHub — posting comments
+        </h2>
+
+        <div class="field" style="margin-top: 0">
+          <label for="githubPat">GitHub token <span class="hint" style="font-weight: 400">(optional)</span></label>
+          <input id="githubPat" type="password" placeholder="github_pat_… or ghp_…" autocomplete="off" spellcheck="false" />
+          <div class="hint">
+            Lets the dock post line-anchored review comments to your PRs, <strong>as you</strong>.
+            Sent only to <code>api.github.com</code> (no third party).
+          </div>
+          <div class="tip">
+            <strong>Recommended: a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">fine-grained token</a></strong> (smallest blast radius). When creating it:
+            <ol>
+              <li><strong>Resource owner</strong> → the <strong>organization</strong> that owns the repos — <em>not</em> your personal account</li>
+              <li><strong>Repository access</strong> → <em>Only select repositories</em> → the repos you review</li>
+              <li><strong>Permissions → Pull requests: Read and write</strong> — nothing else</li>
+            </ol>
+            <strong>Org gate:</strong> for org repos the org must allow fine-grained tokens and may need an
+            <strong>owner to approve</strong> the token (it stays <em>pending</em> until then). If posting returns
+            <strong>404</strong>, that's the cause. A classic token with the <code>repo</code> scope also works
+            (for SSO orgs, <em>Configure SSO → Authorize</em>) but can touch <em>every</em> repo you can access.
+            Revoke anytime in <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">Developer settings</a>.
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="notice">
-      ⚠️ Highlighted code is sent to Anthropic to answer your questions. Don't use it on
-      code you aren't permitted to share externally.
-    </div>
+      <!-- About -->
+      <div class="card about">
+        <h2>
+          <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+          About
+        </h2>
+        <p><strong>Cortex — AI Review Assistant</strong> &nbsp; <span class="pill" id="version">v0.0.0</span></p>
+        <p>An in-page AI copilot for reviewing GitHub pull requests — highlight code, ask, and
+          post review comments, powered by the <strong>Claude subscription or API key you already
+          pay for</strong>. No SaaS middleman, no second subscription, no per-token surprise bill.</p>
+        <div class="links">
+          <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">Manage GitHub tokens</a>
+          <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic API keys</a>
+        </div>
+        <p class="privacy">
+          🔒 Your code and keys stay on your machine. Highlighted code goes only to Anthropic
+          (your account); comments go only to <code>api.github.com</code> (your token). Nothing
+          passes through a third-party server.
+        </p>
+      </div>
 
-    <div class="status" id="status"></div>
+      <div class="status" id="status"></div>
+    </div>
 
     <script type="module" src="./options.ts"></script>
   </body>

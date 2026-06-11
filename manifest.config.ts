@@ -11,9 +11,11 @@ const KEY =
 export default defineManifest({
   manifest_version: 3,
   key: KEY,
-  name: 'Your Code Review Assistant',
-  version: '0.0.0',
-  description: 'In-page AI copilot for reviewing GitHub pull requests.',
+  name: 'Cortex — AI Review Assistant',
+  version: '0.1.0',
+  description:
+    'In-page AI copilot for reviewing GitHub pull requests — on your own Claude ' +
+    'subscription or API key. No SaaS middleman.',
 
   permissions: ['storage', 'nativeMessaging'],
   host_permissions: [

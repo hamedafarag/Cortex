@@ -2,6 +2,7 @@
 // via the shared settings helpers, saving each field as it changes.
 
 import { getSettings, setSettings, type Settings } from '../shared/storage'
+import { icon } from '../content/dock/icons'
 
 const byId = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
 
@@ -14,9 +15,9 @@ const statusEl = byId<HTMLDivElement>('status')
 
 let clearTimer: number | undefined
 function flash(message: string): void {
-  statusEl.textContent = message
+  statusEl.innerHTML = `${icon('check', 13)}<span>${message}</span>`
   window.clearTimeout(clearTimer)
-  clearTimer = window.setTimeout(() => (statusEl.textContent = ''), 1500)
+  clearTimer = window.setTimeout(() => statusEl.replaceChildren(), 1500)
 }
 
 /** Dim the API-key field when it doesn't apply to the chosen backend. */
@@ -30,6 +31,7 @@ async function save(patch: Partial<Settings>): Promise<void> {
 }
 
 async function init(): Promise<void> {
+  byId<HTMLSpanElement>('version').textContent = `v${chrome.runtime.getManifest().version}`
   const settings = await getSettings()
   providerEl.value = settings.provider
   apiKeyEl.value = settings.anthropicApiKey

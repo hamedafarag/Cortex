@@ -1,4 +1,4 @@
-# Your Code Review Assistant
+# Cortex — AI Review Assistant
 
 **A local developer-experience tool that turns the Claude subscription (or API key) you
 already pay for into an in-PR review assistant — no SaaS middleman, no second subscription,

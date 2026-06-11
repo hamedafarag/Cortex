@@ -138,7 +138,7 @@ function mount(): void {
   dock.onSubmit = (question) => onSubmit(dock, question)
   dock.onInsertComment = (body) => {
     const inserted = insertComment(body)
-    dock.flashTray(inserted ? 'Inserted ✓' : 'Focus a GitHub comment box first')
+    dock.flashTray(inserted ? 'Inserted' : 'Focus a GitHub comment box first', inserted)
   }
   dock.onPost = (text) => void postComment(dock, text)
   dock.renderComments(CANNED_COMMENTS)
