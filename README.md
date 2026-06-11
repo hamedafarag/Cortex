@@ -14,9 +14,9 @@ pluggable: use the **Anthropic API** (your own key) or the **Claude Code CLI** (
 existing Claude subscription, via a local native host) — your code never goes to a
 third-party server.
 
-> Status: **Phase 1 + 1b complete** (GitHub only). See [PLAN.md](PLAN.md) for the roadmap,
-> [DESIGN.md](DESIGN.md) for the architecture, and [COMPETITORS.md](COMPETITORS.md) for how
-> this sits in the market.
+> Status: **Phases 0 · 1 · 1b · 2 · 2.5 complete** (GitHub only). See [PLAN.md](PLAN.md) for
+> the roadmap, [CHANGELOG.md](CHANGELOG.md) for the history, [DESIGN.md](DESIGN.md) for the
+> architecture, and [COMPETITORS.md](COMPETITORS.md) for how this sits in the market.
 
 ---
 
