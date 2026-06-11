@@ -26,6 +26,17 @@ async function githubFetch(path: string, init?: RequestInit): Promise<unknown> {
     } catch {
       if (text) message += `: ${text.slice(0, 200)}`
     }
+    // Make the common access errors actionable.
+    if (res.status === 401) {
+      message += ' — no/invalid token. Add a PAT in Options.'
+    } else if (res.status === 403) {
+      message += ' — token lacks permission (needs Pull requests: write).'
+    } else if (res.status === 404) {
+      message +=
+        ' — repo/PR not found, or your token can’t access it. For org repos the' +
+        ' token must have that repo selected, Pull requests: Read and write, and the' +
+        ' org must approve it (or, for a classic token, be SSO-authorized).'
+    }
     throw new Error(message)
   }
   return res.json()
