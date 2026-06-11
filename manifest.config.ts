@@ -24,6 +24,13 @@ export default defineManifest({
     'https://api.github.com/*',
   ],
 
+  icons: {
+    16: 'icons/icon-16.png',
+    32: 'icons/icon-32.png',
+    48: 'icons/icon-48.png',
+    128: 'icons/icon-128.png',
+  },
+
   background: {
     service_worker: 'src/background/index.ts',
     type: 'module',
@@ -42,6 +49,10 @@ export default defineManifest({
   options_page: 'src/options/options.html',
 
   action: {
-    default_title: 'Your Code Review Assistant',
+    default_title: 'Cortex — AI Review Assistant',
+    default_icon: {
+      16: 'icons/icon-16.png',
+      32: 'icons/icon-32.png',
+    },
   },
 })
