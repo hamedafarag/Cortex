@@ -60,7 +60,7 @@ from day one behind one interface.
  ┌──────────────────────── GitHub PR page (github.com/*/pull/*) ───────────────────────┐
  │                                                                                      │
  │   content script ──────────────────────────────────────────────────────────────┐    │
- │     • <dock-panel> Web Component in a shadow root (style-isolated)               │    │
+ │     • dock panel: plain <div> + shadow root (style-isolated)                    │    │
  │     • selection → {file, lineRange, code, diffHunk}                              │    │
  │     • canned-comment insertion (Phase 1b)                                        │    │
  │                                                                                  │    │
@@ -168,7 +168,7 @@ Rides the user's local CLI auth/subscription. Three pieces + an install step.
    - **Future optimization:** read the subscription OAuth token and call the Messages API
      directly (`Authorization: Bearer` + `anthropic-beta: oauth-2025-04-20`) — lean/fast/
      cheap, at the cost of token refresh handling and a larger ToS gray area.
-3. **Installer** (`install.sh` / `install.ps1`) — registers the host per-OS:
+3. **Installer** (`install.sh`; Windows registry is noted but not yet scripted) — registers the host per-OS:
    - macOS: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`
    - Linux: `~/.config/google-chrome/NativeMessagingHosts/`
    - Windows: registry key.
@@ -222,8 +222,9 @@ truth.**
 
 ## 10. Dock panel UI
 
-- A `<dock-panel>` **custom element** mounted by the content script into a host node with
-  an attached **shadow root**; CSS inlined into the shadow root for full isolation.
+- A plain `<div>` host with an **attached shadow root** (content scripts can't register
+  custom elements — `customElements` is null), mounted by the content script; CSS inlined
+  into the shadow root for full isolation.
 - Pinned to the bottom of the viewport, collapsible.
 - Sections: a conversation/answer area (renders streamed markdown) and an input;
   a canned-comments tray (Phase 1b).
