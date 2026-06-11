@@ -8,6 +8,7 @@ import {
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
 import { captureSelection } from './selection'
+import { CANNED_COMMENTS, insertComment, trackCommentFields } from './comments'
 import { DOCK_SELECTOR, DockPanel } from './dock/dock-panel'
 
 // Presence marker: load signal + double-injection guard (visible to page context).
@@ -88,6 +89,11 @@ function mount(): void {
   if (document.querySelector(DOCK_SELECTOR)) return // already mounted
   const dock = new DockPanel()
   dock.onSubmit = (question) => onSubmit(dock, question)
+  dock.onInsertComment = (body) => {
+    const inserted = insertComment(body)
+    dock.flashTray(inserted ? 'Inserted ✓' : 'Focus a GitHub comment box first')
+  }
+  dock.renderComments(CANNED_COMMENTS)
   dock.mount()
 
   // Reflect the current selection in the dock's chip.
@@ -107,6 +113,9 @@ function mount(): void {
 function unmountIfNotPr(): void {
   if (!parsePr()) document.querySelector(DOCK_SELECTOR)?.remove()
 }
+
+// Remember which GitHub comment box was last focused (once, document-wide).
+trackCommentFields()
 
 // Mount now and on GitHub's client-side navigations (SPA — no full reload).
 mount()

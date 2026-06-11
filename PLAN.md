@@ -61,11 +61,11 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ---
 
-## Phase 1b — Out-of-the-box comments
+## Phase 1b — Out-of-the-box comments ✅
 
-- [ ] Canned-comment library (data file)
-- [ ] Comments tray UI in the dock
-- [ ] `content/comments.ts` — insert selected snippet into the focused GitHub comment `<textarea>`
+- [x] Canned-comment library (`content/comments.ts` — 10 review snippets)
+- [x] Comments tray UI in the dock (chips; `mousedown` preventDefault so GitHub's field keeps focus)
+- [x] Insert snippet into the focused GitHub comment `<textarea>` (execCommand + native-setter fallback; field found by `tagName`/`activeElement`, robust across the content-script world)
 
 ---
 

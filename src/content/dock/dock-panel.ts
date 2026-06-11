@@ -8,6 +8,7 @@
 
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import type { CannedComment } from '../comments'
 
 marked.setOptions({ gfm: true, breaks: true })
 
@@ -64,6 +65,19 @@ const STYLES = `
   .answer pre code { background: none; padding: 0; }
   .answer a { color: #0969da; }
   .answer blockquote { border-left: 3px solid #d0d7de; padding-left: 10px; color: #57606a; }
+  .tray {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 6px 12px; border-top: 1px solid #d0d7de;
+  }
+  .tray-label { font-size: 11px; color: #57606a; font-weight: 600; }
+  .tray-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip-btn {
+    font-size: 11px; padding: 2px 8px; border: 1px solid #d0d7de;
+    border-radius: 999px; background: #f6f8fa; color: #1f2328; cursor: pointer;
+    font-family: inherit;
+  }
+  .chip-btn:hover { background: #eaeef2; }
+  .tray-status { font-size: 11px; color: #1a7f37; margin-left: auto; }
   .composer { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid #d0d7de; }
   textarea {
     flex: 1; resize: none; min-height: 36px; max-height: 120px;
@@ -89,6 +103,11 @@ const TEMPLATE = `
     </div>
     <div class="body">
       <div class="answer empty">Highlight code in the diff, then ask a question.</div>
+      <div class="tray">
+        <span class="tray-label">Insert:</span>
+        <span class="tray-chips"></span>
+        <span class="tray-status"></span>
+      </div>
       <div class="composer">
         <textarea placeholder="Ask about the selected code…" rows="1"></textarea>
         <button type="button">Ask</button>
@@ -102,6 +121,8 @@ export class DockPanel {
   readonly host: HTMLElement
   /** Called when the user submits a question. */
   onSubmit: ((question: string) => void) | null = null
+  /** Called when the user clicks a canned-comment chip. */
+  onInsertComment: ((body: string) => void) | null = null
 
   private readonly root: ShadowRoot
   private readonly answerEl: HTMLDivElement
@@ -109,6 +130,9 @@ export class DockPanel {
   private readonly inputEl: HTMLTextAreaElement
   private readonly askBtn: HTMLButtonElement
   private readonly toggleEl: HTMLSpanElement
+  private readonly trayChipsEl: HTMLSpanElement
+  private readonly trayStatusEl: HTMLSpanElement
+  private trayTimer: number | undefined
   private streaming = false
   /** Raw markdown accumulated across stream chunks; re-rendered on each delta. */
   private rawAnswer = ''
@@ -122,8 +146,10 @@ export class DockPanel {
     this.answerEl = this.root.querySelector('.answer')!
     this.chipEl = this.root.querySelector('.chip')!
     this.inputEl = this.root.querySelector('textarea')!
-    this.askBtn = this.root.querySelector('button')!
+    this.askBtn = this.root.querySelector('.composer button')!
     this.toggleEl = this.root.querySelector('.toggle')!
+    this.trayChipsEl = this.root.querySelector('.tray-chips')!
+    this.trayStatusEl = this.root.querySelector('.tray-status')!
 
     this.root.querySelector('.header')!.addEventListener('click', () => this.toggleCollapsed())
     this.askBtn.addEventListener('click', () => this.submit())
@@ -171,6 +197,32 @@ export class DockPanel {
     }
     this.chipEl.textContent = summary
     this.chipEl.hidden = false
+  }
+
+  /** Populate the canned-comment tray with one chip per comment. */
+  renderComments(comments: CannedComment[]): void {
+    this.trayChipsEl.replaceChildren()
+    for (const comment of comments) {
+      const chip = document.createElement('button')
+      chip.type = 'button'
+      chip.className = 'chip-btn'
+      chip.textContent = comment.label
+      chip.title = comment.body
+      // Don't steal focus from GitHub's comment field: preventing the mousedown
+      // default keeps the textarea focused so the insert lands at its caret.
+      chip.addEventListener('mousedown', (e) => e.preventDefault())
+      chip.addEventListener('click', () => this.onInsertComment?.(comment.body))
+      this.trayChipsEl.appendChild(chip)
+    }
+  }
+
+  /** Briefly show a status message in the tray (e.g. inserted / no field). */
+  flashTray(message: string): void {
+    this.trayStatusEl.textContent = message
+    window.clearTimeout(this.trayTimer)
+    this.trayTimer = window.setTimeout(() => {
+      this.trayStatusEl.textContent = ''
+    }, 1800)
   }
 
   /** Begin a fresh streamed answer. */
