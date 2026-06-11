@@ -1,4 +1,4 @@
-# Your Code Review Assistant — Design
+# Cortex — Design
 
 A Chrome extension that turns you into a faster, AI-assisted PR reviewer **without**
 handing the review off to a third-party bot (CodeRabbit, etc.). You stay the reviewer;
@@ -326,3 +326,29 @@ YourCodeReviewAssistant/
   distribution. Revisit before publishing.
 - **Streaming plumbing** — ports, chunking, and the 1 MB native-message cap.
 - **Model IDs/headers** — confirm against live Anthropic docs at build time.
+
+---
+
+## 15. UI & identity (Phase 2.5)
+
+**Name:** Cortex — AI Review Assistant. Internal identifiers (the native-host name
+`com.ycra.reviewer`, `data-ycra-*` attributes, the fixed signing key / extension ID) are
+deliberately left unchanged so renaming doesn't break the installed host.
+
+**Design language — "a precision instrument embedded in GitHub":**
+- **Adaptive / native theming.** The dock's shadow-DOM styles consume GitHub's own Primer
+  CSS custom properties (`--bgColor-default`, `--fgColor-default`, `--fgColor-accent`,
+  `--borderColor-default`, … with legacy `--color-*` fallbacks). Custom properties pierce
+  the shadow boundary, so the dock matches GitHub's light/dark theme automatically — no JS
+  theme detection. The options page (its own `chrome-extension://` page, no Primer tokens)
+  adapts via `prefers-color-scheme`.
+- **Sharp identity over the native base:** a synapse **logomark**, a Cortex-indigo
+  (`#6b5cf6`) top edge on the panel + indigo **Ask** action (the "AI" moments), monospace
+  for technical accents (the `file :line` chip, status), uppercase tracked wordmark.
+- **Icons** are authored inline SVG line-icons (`content/dock/icons.ts`) — no external
+  requests, no third-party assets/attribution; consistent with the no-SaaS ethos and with
+  not bundling licensed icon packs (e.g. Flaticon).
+- **Loading states** for every async path: `Thinking…` (ask) and `Posting…` (post)
+  spinners, plus status rows.
+- **Color-blind safe:** every status pairs colour with an icon **and** a text label
+  (check / alert-triangle / spinner) — never colour alone.

@@ -1,4 +1,4 @@
-# Your Code Review Assistant — Build Plan
+# Cortex — Build Plan
 
 Phased, task-level breakdown derived from [DESIGN.md](DESIGN.md).
 Check items off as they land. The session todo list tracks the **active** phases
@@ -76,6 +76,17 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 - [x] Use API `patch` as **authoritative** grounding context — `getDiffHunk` (cached `listPullFiles` + hunk parser) enriches each ask's `diffHunk` in the background (best-effort)
 - [x] Map dock selection → `path` / `line` / `side`; `commit_id` resolved in the background
 - [x] Post line-anchored review comment: `POST /repos/{owner}/{repo}/pulls/{n}/comments` (wiring verified via safe 401; real post needs a PAT)
+
+---
+
+## Phase 2.5 — UI & Identity ✅
+
+- [x] Rebrand to **Cortex — AI Review Assistant** (manifest, dock, options, README; v0.1.0); internal ids unchanged
+- [x] License-clean inline SVG icon set (`content/dock/icons.ts` — authored, no external assets)
+- [x] Redesign the dock — adaptive GitHub Primer theming (native light/dark), synapse logomark, Cortex top edge + indigo Ask, monospace technical accents, icon buttons
+- [x] Loading states for every async status (Thinking… / Posting… spinners + status rows)
+- [x] Color-blind-safe status — icon + label on every state, never colour alone
+- [x] Redesign options into AI backend / GitHub / About cards (adaptive light+dark) with version + privacy summary
 
 ---
 
