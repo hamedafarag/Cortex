@@ -90,12 +90,79 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
 ---
 
-## Phase 3 — Advanced review
+## Phase 3 — From answer to action
 
-- [ ] Whole-file / whole-PR review summary
-- [ ] Per-selection threaded follow-ups (conversation `history`)
-- [ ] Severity tags on findings
-- [ ] Persist conversation per PR
+Reframed after a review-tooling landscape survey (CodeRabbit, Greptile, Qodo Merge,
+Sourcery, Conventional Comments, Reviewdog, Codecov, …) — full catalog with per-feature
+exemplars + effort/impact in [FEATURE-LANDSCAPE.md](FEATURE-LANDSCAPE.md). The finding: the highest-leverage
+work is **not net-new infrastructure** but unlocking value already latent in the code — the
+GitHub post pipeline, and the under-fed `AskRequest.context` / `history` fields. The
+through-line: **make the AI's output land in the PR as real, well-labeled review comments.**
+Still reviewer-driven, on demand, never autonomous.
+
+### 3a. Quick wins — harvest what's already wired (low effort, high impact)
+- [x] **Answer → comment bridge** — a "Use as comment" action under a finished answer loads
+  the streamed text into the composer (editable, focused); the existing "Post to line" then
+  does the write (edit-then-post — keeps the human-in-the-loop confirm). Plus a "Copy" action.
+  Entirely in `dock-panel.ts` (+ a `copy` icon) — no new wire/background/API code, as predicted.
+  *Verified in-browser via a component harness: 13 behavioural assertions + screenshots.*
+- [x] **PR intent context injection** — every ask now fetches the PR **title + description**
+  (`getPullMeta`, cached per-PR, body truncated) and injects them into `AskRequest.context`,
+  enriched best-effort in the background alongside the diff hunk. Both prompt builders render
+  them (intent before code) and both system prompts tell the model to judge the change against
+  its stated intent. Builder extracted to a dependency-free `shared/prompt.ts` (host mirrors it).
+  *Verified: 8 prompt-assembly assertions on the real builder.*
+- [x] **Committable `suggestion` blocks** — a **Suggest a fix** button asks the model for ONLY
+  a triple-backtick `suggestion` block for the selection; it streams into the answer and rides
+  the answer→comment bridge, so it posts via the existing comment path (no new API).
+  `createReviewComment` + `GH_POST_COMMENT` gained optional `start_line`/`start_side`, and a
+  pure `reviewTarget()` anchors a multi-line selection to the whole range (`startLine`..`line`)
+  so the suggestion replaces exactly those lines (single-line selections unchanged). This also
+  makes ordinary multi-line comments anchor to the full selection. *Verified: 8 `reviewTarget`
+  assertions (Node) + 7 dock-UI assertions (browser) + screenshot.*
+- [x] **Conventional Comments picker** — a second dock tray adds Conventional Comments labels
+  (praise / nit / suggestion / issue / question / thought / chore) + a decoration select
+  (none / non-blocking / blocking / if-minor); clicking a label **prepends** `label: ` or
+  `label (decoration): ` to the focused GitHub comment box via `prependComment` (the insert
+  path refactored to share field-finding). *Verified: 8 component-harness checks + a real test
+  on a live GitHub PR in Edge — prepended `suggestion (non-blocking): …` into GitHub's actual
+  comment textarea with focus retained.*
+- [x] **Threaded follow-ups** — `AskRequest.history` wired end-to-end. The dock owns the
+  conversation: it renders prior Q&A turns, exposes `getHistory()` to feed the next request,
+  and has a **New thread** reset. The API provider already mapped history to messages; the CLI
+  host now serializes it as a `Conversation so far:` transcript too (it was silently dropping
+  follow-up context). *Verified: 6 host assertions (Node) + 18 dock-flow assertions (browser)
+  + screenshot.*
+
+### 3b. On-demand review depth
+- [ ] **Whole-file / whole-PR review** — feed the full file patch (not one hunk) / all file
+  patches and return a findings list; each finding promotable to a comment via 3a.
+- [ ] **AI PR summary** — a "Summarize PR" button: stream a TL;DR + key changes from the file
+  patches into the answer area. Fold in a per-file one-line gloss and a 1–5 effort badge.
+- [ ] **Severity tags on findings** — structured label per finding, rendered icon + label
+  (color-blind-safe), for blocker-vs-nit triage.
+- [ ] **Specialist lenses** — preset Security / Performance / Error-handling / Readability
+  buttons that scope the system prompt for one turn (prompt templating over the ask path).
+- [ ] **Test-gap call-out** — a heuristic "which changed source files have no matching test
+  changes?" pass over the file list (tests detected by path). An approximation, not coverage.
+
+### 3c. Persistence & trust
+- [ ] **Persist per PR** — store conversation turns + draft comments keyed by
+  `repo#prNumber` in `chrome.storage.local`; restore on mount.
+- [ ] **Confirm / undo before posting** — posting is a real public write (see Safety): add a
+  confirm affordance, or a post-then-Undo window (`DELETE /pulls/comments/{id}`).
+- [ ] **Secret redaction** — mask obvious secrets (key patterns / high-entropy strings) in the
+  selection before it leaves the browser; show a notice in the dock when something was
+  redacted. Strengthens the "your key, no third-party SaaS" trust story.
+
+### Deferred / out of scope (decided, not forgotten)
+- [ ] **Batch / pending review + review verdict** (Approve / Request changes) — requires
+  migrating from standalone comments to the Reviews API (`POST /pulls/{n}/reviews` with a
+  `comments[]` array + submit `event`). Real value for high-volume reviewers but the heaviest
+  item here — defer until 3a/3b are solid, and gate the verdict behind explicit user action.
+- ~~Mark-as-viewed / file-progress tracking~~ — **skip:** GitHub ships per-file "Viewed" with
+  a progress bar natively; reimplementing it fights GitHub's DOM for low marginal value.
+- ~~Autonomous auto-review (bot mode)~~ — **skip:** against Cortex's human-in-the-loop identity.
 
 ---
 

@@ -13,6 +13,10 @@ export interface AskContext {
   file?: string
   /** Inclusive [start, end] line range of the selection. */
   lineRange?: [number, number]
+  /** PR title, for grounding the model in the change's stated intent. */
+  prTitle?: string
+  /** PR description/body (truncated), for intent grounding. */
+  prBody?: string
   /** The exact text the user highlighted. */
   selectedCode?: string
   /** Surrounding diff hunk, for grounding the model. */

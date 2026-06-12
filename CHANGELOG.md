@@ -3,6 +3,38 @@
 All notable changes to **Cortex — AI Review Assistant**. Versions track the extension's
 manifest version; format loosely follows [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased] — Phase 3 (from answer to action)
+
+### Added
+- **Answer → comment bridge** — a finished AI answer now offers **Use as comment** (loads the
+  answer into the composer to edit, then post via *Post to line*) and **Copy**, closing the
+  retype gap between the answer and the comment box. Edit-then-post keeps the human in the
+  loop before any public write. (Phase 3a)
+- **PR-intent grounding** — asks now include the PR **title + description** (fetched from the
+  GitHub API, cached per-PR, body truncated), so the model can judge whether a change does
+  what it claims, not just whether it's locally correct. The per-turn prompt builder moved to
+  a dependency-free `shared/prompt.ts` (mirrored by the native host), and both system prompts
+  were updated to use the stated intent. (Phase 3a)
+- **Committable suggestions** — a **Suggest a fix** button asks the model for a single
+  GitHub `suggestion` block for the selection; it rides the answer→comment bridge and posts as
+  a one-click-appliable suggestion. Review-comment posting now supports **multi-line anchors**
+  (`start_line`/`start_side`), so a suggestion replaces exactly the selected lines and ordinary
+  comments attach to the whole selection. (Phase 3a)
+- **Conventional Comments picker** — a **Label** tray composes a `label (decoration): ` prefix
+  (praise / nit / suggestion / issue / question / thought / chore × none / non-blocking /
+  blocking / if-minor) and prepends it to the focused comment box, so review notes read
+  clearly as blocking, optional, or FYI. (Phase 3a)
+- **Threaded follow-ups** — the dock now keeps a conversation: ask a follow-up and the model
+  receives the prior turns (`AskRequest.history`, wired through both the API provider and the
+  CLI host). The answer area shows the thread (questions + answers); a **New thread** button
+  resets it. (Phase 3a)
+
+### Changed
+- **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated
+  over GitHub's content, the dock now starts as a small Cortex button (bottom-right). Click it
+  to expand the **full-width** dock; collapse back to the button when done. Fixes the expanded
+  dock hiding the comment box / page content behind it.
+
 ## [0.1.0] — 2026-06-11
 
 First feature-complete build — Phases 0 · 1 · 1b · 2 · 2.5.

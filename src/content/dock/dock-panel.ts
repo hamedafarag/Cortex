@@ -8,10 +8,19 @@
 
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import type { CannedComment } from '../comments'
+import type { CannedComment, ConventionalLabel } from '../comments'
+import type { ChatMessage } from '../../shared/types'
 import { icon } from './icons'
 
 marked.setOptions({ gfm: true, breaks: true })
+
+/** Escape user text (questions are shown verbatim in the conversation thread). */
+function escapeHtml(s: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }
+  return s.replace(/[&<>"']/g, (c) => map[c])
+}
 
 /** Attribute used to find/dedupe the dock host in the page DOM. */
 export const DOCK_SELECTOR = '[data-ycra-dock]'
@@ -39,12 +48,9 @@ const STYLES = `
   }
 
   .panel {
-    margin: 0 auto; max-width: 1012px;
     background: var(--bg);
-    border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: 10px 10px 0 0;
-    box-shadow: 0 -1px 0 var(--border-muted), 0 -8px 28px rgba(0,0,0,.16);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 28px rgba(0,0,0,.16);
     overflow: hidden;
     animation: rise .18s cubic-bezier(.2,.7,.3,1);
   }
@@ -82,10 +88,32 @@ const STYLES = `
     background: none; color: var(--fg-muted); cursor: pointer; padding: 0;
   }
   .iconbtn:hover { background: var(--bg-inset); color: var(--fg); }
+  .iconbtn[hidden] { display: none }
+  .newthread {
+    font: inherit; font-size: 11px; font-weight: 600; color: var(--fg-muted);
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    padding: 3px 9px; cursor: pointer;
+  }
+  .newthread:hover { background: var(--bg-inset); color: var(--fg); border-color: var(--fg-muted); }
+  .newthread[hidden] { display: none }
+
+  /* ── launcher (collapsed state) ───────────────────────────────────── */
+  .launcher {
+    display: none;
+    position: absolute; right: 16px; bottom: 16px;
+    width: 48px; height: 48px; padding: 0;
+    border-radius: 50%; place-items: center; cursor: pointer;
+    background: var(--cortex); color: var(--cortex-on);
+    border: 1px solid color-mix(in srgb, var(--cortex) 70%, #000);
+    box-shadow: 0 4px 14px rgba(0,0,0,.28);
+    animation: rise .18s cubic-bezier(.2,.7,.3,1);
+  }
+  .launcher:hover { background: color-mix(in srgb, var(--cortex) 88%, #000) }
+  :host([collapsed]) .launcher { display: grid }
+  :host([collapsed]) .panel { display: none }
 
   /* ── body ─────────────────────────────────────────────────────────── */
   .body { display: flex; flex-direction: column; }
-  :host([collapsed]) .body { display: none }
 
   .answer {
     padding: 14px; overflow-y: auto; min-height: 68px; max-height: 240px;
@@ -111,6 +139,30 @@ const STYLES = `
   .answer a { color: var(--accent) }
   .answer blockquote { border-left: 3px solid var(--border); padding-left: 10px; color: var(--fg-muted) }
 
+  /* ── conversation turns ───────────────────────────────────────────── */
+  .turn-q {
+    font-weight: 600; color: var(--fg); white-space: pre-wrap; word-break: break-word;
+    padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--border-muted);
+  }
+  .turn-q:first-child { padding-top: 0; margin-top: 0; border-top: none; }
+  .turn-q::before {
+    content: "You"; margin-right: 6px;
+    font: 600 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--cortex);
+  }
+  .turn-a { margin-top: 6px }
+
+  /* ── answer actions ───────────────────────────────────────────────── */
+  .answer-actions { display: flex; gap: 6px; padding: 0 14px 10px; }
+  .answer-actions[hidden] { display: none }
+  .link-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    font: inherit; font-size: 11px; color: var(--fg-muted);
+    background: none; border: 1px solid transparent; border-radius: 6px;
+    padding: 3px 8px; cursor: pointer;
+  }
+  .link-btn:hover { background: var(--bg-inset); color: var(--fg) }
+  .link-btn .icon { flex: none }
+
   /* ── tray ─────────────────────────────────────────────────────────── */
   .tray {
     display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
@@ -125,6 +177,12 @@ const STYLES = `
   }
   .chip-btn:hover { background: var(--bg-inset); border-color: var(--fg-muted) }
   .tray-status { font-size: 11px; color: var(--success); margin-left: auto; display: inline-flex; align-items: center; gap: 5px }
+  .label-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  select.decoration {
+    font: inherit; font-size: 11px; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 2px 6px; cursor: pointer;
+  }
 
   /* ── composer ─────────────────────────────────────────────────────── */
   .composer { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 12px; border-top: 1px solid var(--border); }
@@ -135,7 +193,7 @@ const STYLES = `
   }
   textarea::placeholder { color: var(--fg-muted) }
   textarea:focus { outline: 2px solid color-mix(in srgb, var(--cortex) 55%, transparent); outline-offset: -1px; border-color: var(--cortex) }
-  .actions { display: flex; align-items: center; gap: 8px }
+  .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
   .post-status { font-size: 11px; margin-right: auto; display: inline-flex; align-items: center; gap: 6px; min-width: 0 }
   .post-status .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
   .post-status.error { color: var(--danger) }
@@ -168,25 +226,37 @@ function header(): string {
       </div>
       <span class="spacer"></span>
       <span class="chip" hidden>${icon('code', 13)}<span class="label"></span></span>
+      <button class="newthread" type="button" title="Clear the conversation and start a new thread" aria-label="New thread" hidden>New</button>
       <button class="iconbtn toggle" type="button" title="Collapse / expand" aria-label="Collapse">${icon('chevronDown', 16)}</button>
     </div>`
 }
 
 const TEMPLATE = `
   <style>${STYLES}</style>
+  <button class="launcher" type="button" aria-label="Open Cortex review assistant" title="Open Cortex">${icon('logo', 22)}</button>
   <div class="panel">
     ${header()}
     <div class="body">
       <div class="answer placeholder">Highlight code in the diff, then ask a question.</div>
+      <div class="answer-actions" hidden>
+        <button type="button" class="link-btn use-answer" title="Load this answer into the comment box to edit and post">${icon('comment', 13)} Use as comment</button>
+        <button type="button" class="link-btn copy-answer" title="Copy the answer to the clipboard">${icon('copy', 13)} Copy</button>
+      </div>
       <div class="tray">
         <span class="tray-label">${icon('plus', 13)} Insert</span>
         <span class="tray-chips"></span>
         <span class="tray-status"></span>
       </div>
+      <div class="tray labels">
+        <span class="tray-label">${icon('tag', 12)} Label</span>
+        <select class="decoration" title="Conventional Comments decoration"></select>
+        <span class="label-chips"></span>
+      </div>
       <div class="composer">
         <textarea placeholder="Ask about the code, or write a comment to post…" rows="1"></textarea>
         <div class="actions">
           <span class="post-status"></span>
+          <button type="button" class="btn suggest" title="Generate a committable suggestion for the selected lines">${icon('wand', 15)} Suggest a fix</button>
           <button type="button" class="btn ask">${icon('sparkles', 15)} Ask</button>
           <button type="button" class="btn post" title="Post the text above as a review comment on the selected line">${icon('comment', 15)} Post to line</button>
         </div>
@@ -198,51 +268,80 @@ const TEMPLATE = `
 export class DockPanel {
   readonly host: HTMLElement
   onSubmit: ((question: string) => void) | null = null
+  onSuggest: (() => void) | null = null
   onInsertComment: ((body: string) => void) | null = null
+  onApplyLabel: ((label: ConventionalLabel, decoration: string) => void) | null = null
   onPost: ((text: string) => void) | null = null
 
   private readonly root: ShadowRoot
   private readonly answerEl: HTMLDivElement
+  private readonly answerActionsEl: HTMLDivElement
   private readonly chipEl: HTMLSpanElement
   private readonly chipLabel: HTMLSpanElement
   private readonly inputEl: HTMLTextAreaElement
   private readonly askBtn: HTMLButtonElement
+  private readonly suggestBtn: HTMLButtonElement
   private readonly postBtn: HTMLButtonElement
   private readonly postStatusEl: HTMLSpanElement
-  private readonly toggleEl: HTMLButtonElement
   private readonly trayChipsEl: HTMLSpanElement
   private readonly trayStatusEl: HTMLSpanElement
+  private readonly labelChipsEl: HTMLSpanElement
+  private readonly decorationSelect: HTMLSelectElement
+  private readonly newThreadBtn: HTMLButtonElement
   private trayTimer: number | undefined
   private streaming = false
   private rawAnswer = ''
+  /** Finalized conversation turns (oldest first); `display` overrides the shown question text. */
+  private turns: (ChatMessage & { display?: string })[] = []
+  private pendingQuestion: string | null = null
+  private pendingDisplay = ''
+  /** Cached HTML of finalized turns + the in-flight question, so streaming only re-renders the answer. */
+  private threadPrefix = ''
 
   constructor() {
     this.host = document.createElement('div')
     this.host.setAttribute('data-ycra-dock', '')
+    this.host.setAttribute('collapsed', '') // start as the launcher button; expand on click
     this.root = this.host.attachShadow({ mode: 'open' })
     this.root.innerHTML = TEMPLATE
 
     this.answerEl = this.root.querySelector('.answer')!
+    this.answerActionsEl = this.root.querySelector('.answer-actions')!
     this.chipEl = this.root.querySelector('.chip')!
     this.chipLabel = this.root.querySelector('.chip .label')!
     this.inputEl = this.root.querySelector('textarea')!
     this.askBtn = this.root.querySelector('.btn.ask')!
+    this.suggestBtn = this.root.querySelector('.btn.suggest')!
     this.postBtn = this.root.querySelector('.btn.post')!
     this.postStatusEl = this.root.querySelector('.post-status')!
-    this.toggleEl = this.root.querySelector('.toggle')!
     this.trayChipsEl = this.root.querySelector('.tray-chips')!
     this.trayStatusEl = this.root.querySelector('.tray-status')!
+    this.labelChipsEl = this.root.querySelector('.label-chips')!
+    this.decorationSelect = this.root.querySelector('.decoration')!
+    this.newThreadBtn = this.root.querySelector('.newthread')!
 
     this.root.querySelector('.header')!.addEventListener('click', (e) => {
-      // Let the chip text be selectable without toggling.
-      if ((e.target as HTMLElement).closest('.chip')) return
+      const t = e.target as HTMLElement
+      // Chip text stays selectable; the New-thread button has its own handler.
+      if (t.closest('.chip') || t.closest('.newthread')) return
       this.toggleCollapsed()
     })
+    this.root.querySelector('.launcher')!.addEventListener('click', () => this.toggleCollapsed())
+    this.newThreadBtn.addEventListener('click', () => this.newThread())
     this.askBtn.addEventListener('click', () => this.submit())
+    this.suggestBtn.addEventListener('click', () => {
+      if (!this.streaming) this.onSuggest?.()
+    })
     this.postBtn.addEventListener('click', () => {
       const text = this.inputEl.value.trim()
       if (text) this.onPost?.(text)
     })
+    this.root.querySelector('.use-answer')!.addEventListener('click', () =>
+      this.useAnswerAsComment(),
+    )
+    this.root.querySelector('.copy-answer')!.addEventListener('click', () =>
+      this.copyAnswer(),
+    )
     this.inputEl.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
@@ -263,9 +362,9 @@ export class DockPanel {
     parent.appendChild(this.host)
   }
 
+  /** Toggle between the full-width dock and the collapsed launcher button. */
   private toggleCollapsed(): void {
-    const collapsed = this.host.toggleAttribute('collapsed')
-    this.toggleEl.innerHTML = icon(collapsed ? 'chevronUp' : 'chevronDown', 16)
+    this.host.toggleAttribute('collapsed')
   }
 
   private submit(): void {
@@ -298,6 +397,28 @@ export class DockPanel {
     }
   }
 
+  renderLabels(labels: ConventionalLabel[], decorations: readonly string[]): void {
+    this.decorationSelect.replaceChildren()
+    for (const d of decorations) {
+      const opt = document.createElement('option')
+      opt.value = d
+      opt.textContent = d || 'no decoration'
+      this.decorationSelect.appendChild(opt)
+    }
+    this.labelChipsEl.replaceChildren()
+    for (const item of labels) {
+      const chip = document.createElement('button')
+      chip.type = 'button'
+      chip.className = 'chip-btn'
+      chip.textContent = item.label
+      chip.title = `Prepend "${item.value}: "`
+      // Don't steal focus from GitHub's comment field on click.
+      chip.addEventListener('mousedown', (e) => e.preventDefault())
+      chip.addEventListener('click', () => this.onApplyLabel?.(item, this.decorationSelect.value))
+      this.labelChipsEl.appendChild(chip)
+    }
+  }
+
   flashTray(message: string, ok = true): void {
     this.trayStatusEl.innerHTML = `${icon(ok ? 'check' : 'alert', 12)}<span>${message}</span>`
     this.trayStatusEl.style.color = ok ? 'var(--success)' : 'var(--danger)'
@@ -305,43 +426,127 @@ export class DockPanel {
     this.trayTimer = window.setTimeout(() => this.trayStatusEl.replaceChildren(), 2000)
   }
 
+  private showAnswerActions(visible: boolean): void {
+    this.answerActionsEl.hidden = !visible
+  }
+
+  /** Load the streamed answer into the composer so the reviewer can edit, then Post. */
+  private useAnswerAsComment(): void {
+    const text = this.rawAnswer.trim()
+    if (!text) return
+    this.inputEl.value = text
+    this.inputEl.focus()
+    this.inputEl.selectionStart = this.inputEl.selectionEnd = text.length
+    this.inputEl.scrollIntoView({ block: 'nearest' })
+    this.flashTray('Loaded — edit, then Post to line')
+  }
+
+  private copyAnswer(): void {
+    const text = this.rawAnswer.trim()
+    if (!text) return
+    void navigator.clipboard?.writeText(text).then(
+      () => this.flashTray('Copied'),
+      () => this.flashTray('Copy failed', false),
+    )
+  }
+
+  // ── conversation ───────────────────────────────────────────────────
+  /** The finalized conversation, for the next request's `history`. */
+  getHistory(): ChatMessage[] {
+    return this.turns.map((t) => ({ role: t.role, content: t.content }))
+  }
+
+  /** Clear the thread back to the empty placeholder. */
+  newThread(): void {
+    this.turns = []
+    this.pendingQuestion = null
+    this.pendingDisplay = ''
+    this.threadPrefix = ''
+    this.rawAnswer = ''
+    this.showAnswerActions(false)
+    this.newThreadBtn.hidden = true
+    this.answerEl.className = 'answer placeholder'
+    this.answerEl.textContent = 'Highlight code in the diff, then ask a question.'
+  }
+
+  /** Rendered HTML for the finalized turns — questions verbatim, answers as markdown. */
+  private finalizedHtml(): string {
+    return this.turns
+      .map((t) =>
+        t.role === 'user'
+          ? `<div class="turn-q">${escapeHtml(t.display ?? t.content)}</div>`
+          : `<div class="turn-a">${DOMPurify.sanitize(marked.parse(t.content) as string)}</div>`,
+      )
+      .join('')
+  }
+
   // ── ask lifecycle ──────────────────────────────────────────────────
-  startAnswer(): void {
+  startAnswer(question: string, display?: string): void {
     this.streaming = true
     this.askBtn.disabled = true
+    this.suggestBtn.disabled = true
     this.host.removeAttribute('collapsed')
     this.rawAnswer = ''
+    this.pendingQuestion = question
+    this.pendingDisplay = display ?? question
+    this.showAnswerActions(false)
+    this.threadPrefix =
+      this.finalizedHtml() + `<div class="turn-q">${escapeHtml(this.pendingDisplay)}</div>`
     this.answerEl.className = 'answer'
-    this.answerEl.innerHTML = `<div class="status-row spinner">${icon('spinner', 15)}<span>Thinking…</span></div>`
+    this.answerEl.innerHTML =
+      this.threadPrefix +
+      `<div class="status-row spinner">${icon('spinner', 15)}<span>Thinking…</span></div>`
+    this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   appendText(delta: string): void {
     this.rawAnswer += delta
-    this.answerEl.innerHTML = DOMPurify.sanitize(marked.parse(this.rawAnswer) as string)
+    this.answerEl.innerHTML =
+      this.threadPrefix +
+      `<div class="turn-a">${DOMPurify.sanitize(marked.parse(this.rawAnswer) as string)}</div>`
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   finishAnswer(): void {
     this.streaming = false
     this.askBtn.disabled = false
-    if (!this.rawAnswer.trim()) {
-      this.answerEl.className = 'answer placeholder'
-      this.answerEl.textContent = '(no response)'
+    this.suggestBtn.disabled = false
+    if (this.rawAnswer.trim() && this.pendingQuestion != null) {
+      // Commit the exchange; keep rawAnswer so "Use as comment" can act on the latest answer.
+      this.turns.push({ role: 'user', content: this.pendingQuestion, display: this.pendingDisplay })
+      this.turns.push({ role: 'assistant', content: this.rawAnswer })
+      this.pendingQuestion = null
+      this.newThreadBtn.hidden = false
+      this.answerEl.className = 'answer'
+      this.answerEl.innerHTML = this.finalizedHtml()
+      this.answerEl.scrollTop = this.answerEl.scrollHeight
+      this.showAnswerActions(true)
+    } else {
+      this.pendingQuestion = null
+      this.answerEl.innerHTML =
+        this.threadPrefix + `<div class="status-row"><span>(no response)</span></div>`
     }
   }
 
   showError(message: string): void {
     this.streaming = false
     this.askBtn.disabled = false
+    this.suggestBtn.disabled = false
     this.host.removeAttribute('collapsed')
+    this.showAnswerActions(false)
+    this.pendingQuestion = null
     this.answerEl.className = 'answer'
-    this.answerEl.innerHTML = `<div class="status-row error">${icon('alert', 16)}<span></span></div>`
-    this.answerEl.querySelector('span')!.textContent = message
+    this.answerEl.innerHTML =
+      this.finalizedHtml() +
+      `<div class="status-row error">${icon('alert', 16)}<span class="msg"></span></div>`
+    this.answerEl.querySelector('.status-row.error .msg')!.textContent = message
+    this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   // ── post lifecycle ─────────────────────────────────────────────────
   postPending(): void {
     this.host.removeAttribute('collapsed')
+    this.showAnswerActions(false)
     this.postBtn.disabled = true
     this.postStatusEl.className = 'post-status'
     this.postStatusEl.innerHTML = `<span class="spinner">${icon('spinner', 13)}</span><span class="label">Posting…</span>`
@@ -351,11 +556,14 @@ export class DockPanel {
     this.postBtn.disabled = false
     this.postStatusEl.replaceChildren()
     this.host.removeAttribute('collapsed')
+    this.showAnswerActions(false)
     this.answerEl.className = 'answer'
     this.answerEl.innerHTML =
+      this.finalizedHtml() +
       `<div class="status-row ok">${icon('check', 16)}<span>Comment posted — </span>` +
       `<a target="_blank" rel="noopener noreferrer">view on GitHub ${icon('externalLink', 12)}</a></div>`
-    this.answerEl.querySelector('a')!.setAttribute('href', url)
+    this.answerEl.querySelector('.status-row.ok a')!.setAttribute('href', url)
+    this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   postFailed(message: string): void {

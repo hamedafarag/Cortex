@@ -8,13 +8,14 @@ A browser extension (Manifest V3) that gives you an in-page AI copilot while rev
 GitHub pull requests — **without** handing the review off to a third-party bot. You stay
 the reviewer; the extension is your assistant.
 
-Open a PR and a **dock panel** appears at the bottom of the page. Highlight code in the
-diff, ask a question, and get a streamed, markdown-rendered answer. The AI backend is
+Open a PR and a small **Cortex button** appears at the bottom-right — click it to open the
+dock (a full-width panel; collapse it back from the header so it never blocks the page).
+Highlight code in the diff, ask a question, and get a streamed, markdown-rendered answer. The AI backend is
 pluggable: use the **Anthropic API** (your own key) or the **Claude Code CLI** (your
 existing Claude subscription, via a local native host) — your code never goes to a
 third-party server.
 
-> Status: **Phases 0 · 1 · 1b · 2 · 2.5 complete** (GitHub only). See [PLAN.md](PLAN.md) for
+> Status: **Phases 0 · 1 · 1b · 2 · 2.5 complete; Phase 3 in progress** (GitHub only). See [PLAN.md](PLAN.md) for
 > the roadmap, [CHANGELOG.md](CHANGELOG.md) for the history, [DESIGN.md](DESIGN.md) for the
 > architecture, and [COMPETITORS.md](COMPETITORS.md) for how this sits in the market.
 
@@ -23,15 +24,26 @@ third-party server.
 ## Features
 
 - **Ask about highlighted code** — select code in a PR diff, ask, and get a streamed,
-  markdown-rendered answer grounded in the **authoritative diff hunk** (fetched from the
-  GitHub API, not just the scraped DOM).
+  markdown-rendered answer grounded in the **authoritative diff hunk** and the PR's
+  **title + description** (fetched from the GitHub API, not just the scraped DOM) — so the
+  model judges the change against its stated intent.
+- **Turn an answer into a comment** — a finished answer offers **Use as comment** (drops it
+  into the composer to edit, then post) and **Copy** — no retyping.
+- **Suggest a fix** — get a committable GitHub `suggestion` block for the selected lines that
+  the author can apply in one click; multi-line selections anchor to the whole range.
+- **Threaded follow-ups** — keep asking about the same code in one conversation; each
+  follow-up carries the prior turns. **New thread** clears it.
 - **Two interchangeable backends** behind one interface, with automatic fallback:
   - **Anthropic API** — your own API key, billed to your account.
   - **Claude Code CLI** — your Claude subscription, via a local native-messaging host that
     shells out to the `claude` CLI (no API key needed).
 - **Out-of-the-box comments** — insert canned review snippets (Nit, Needs test, …) into
   GitHub's comment box.
-- **Post line-anchored review comments** straight to the PR via your own GitHub token.
+- **Conventional Comments labels** — prepend a semantic `label (decoration): ` prefix
+  (suggestion, issue, nit, … · blocking / non-blocking / if-minor) so authors instantly see
+  what's blocking vs. optional.
+- **Post line-anchored review comments** (single- or multi-line) straight to the PR via your
+  own GitHub token.
 - **Native, adaptive UI** — the dock inherits GitHub's light/dark theme so it feels
   built-in; sharp Cortex identity, line icons, loading states, and **color-blind-safe**
   status (icon + label, never colour alone).
@@ -138,12 +150,18 @@ and revoke the classic one when you're done.
 
 ## Usage
 
-1. Open any GitHub pull request.
+1. Open any GitHub pull request — a **Cortex button** sits at the bottom-right; click it to
+   open the dock (the header chevron collapses it back to the button).
 2. Highlight code in the diff — the dock's chip shows the captured `file :lines`.
-3. Type a question and click **Ask** (or ⌘/Ctrl+Enter). The answer streams in.
-4. **Insert** a canned review comment (Nit, Needs test, …) into GitHub's comment box from
-   the dock's **Insert:** tray.
-5. **Post to line** — type a comment and post it as a line-anchored review comment via the
+3. Type a question and click **Ask** (or ⌘/Ctrl+Enter) — or click **Suggest a fix** for a
+   committable `suggestion` block on the selected lines. The answer streams in; ask follow-ups
+   in the same thread, or start fresh with the **New** button in the dock header.
+4. From a finished answer, click **Use as comment** to drop it into the composer (edit it
+   first), or **Copy** it.
+5. **Insert** a canned snippet from the **Insert** tray, or click a **Label** (suggestion,
+   issue, nit, …) — optionally with a decoration — to prepend a Conventional Comments prefix
+   to your comment.
+6. **Post to line** — type a comment and post it as a line-anchored review comment via the
    GitHub API (needs a token — see above). The dock links to the created comment.
 
 ---
@@ -173,7 +191,7 @@ src/
     selection.ts      selection → {file, lineRange, side, code, language}
     comments.ts       canned comments + insert into GitHub's comment box
   options/            options page (backend, key, model, PAT, About)
-  shared/             types, message protocols, settings storage
+  shared/             types, message protocols, settings storage, prompt builder
 native-host/          reviewer-host.mjs (native messaging) + install.sh
 public/icons/         icon.svg + generated PNGs (npm run icons)
 scripts/gen-icons.mjs SVG → PNG icon generator
@@ -197,9 +215,11 @@ rm ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.ycra.re
 
 ## Roadmap
 
-Phases 0 · 1 · 1b · 2 · 2.5 are complete (see [PLAN.md](PLAN.md) and
-[CHANGELOG.md](CHANGELOG.md)). Next up — **Phase 3**: whole-PR review, threaded follow-ups
-per selection, and severity-tagged findings.
+See [PLAN.md](PLAN.md) and [CHANGELOG.md](CHANGELOG.md). Now in **Phase 3 — from answer to
+action**: making AI output land as real, well-labeled review comments. **Done (Phase 3a):**
+answer→comment bridge, PR-intent grounding, committable `suggestion` blocks, and Conventional
+Comments labels. **Next:** threaded follow-ups, then whole-PR review and severity-tagged
+findings.
 
 ---
 

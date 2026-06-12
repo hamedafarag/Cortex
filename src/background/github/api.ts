@@ -51,6 +51,33 @@ export async function getPullHeadSha(repo: string, prNumber: number): Promise<st
   return pr.head.sha
 }
 
+export interface PullMeta {
+  title: string
+  body: string
+}
+
+const pullMetaCache = new Map<string, { at: number; meta: PullMeta }>()
+const PULL_META_TTL_MS = 60_000
+
+/** PR title + description, for grounding asks in the change's stated intent. Cached
+ *  briefly; the body is truncated so a long description can't dominate the prompt. */
+export async function getPullMeta(repo: string, prNumber: number): Promise<PullMeta> {
+  const key = `${repo}#${prNumber}`
+  const cached = pullMetaCache.get(key)
+  if (cached && Date.now() - cached.at < PULL_META_TTL_MS) return cached.meta
+  const pr = (await githubFetch(`/repos/${repo}/pulls/${prNumber}`)) as {
+    title?: string
+    body?: string | null
+  }
+  const body = pr.body ?? ''
+  const meta: PullMeta = {
+    title: pr.title ?? '',
+    body: body.length > 4000 ? `${body.slice(0, 4000)}\n… (description truncated)` : body,
+  }
+  pullMetaCache.set(key, { at: Date.now(), meta })
+  return meta
+}
+
 export interface PullFile {
   filename: string
   status: string
@@ -149,6 +176,9 @@ export async function createReviewComment(
     path: string
     line: number
     side: 'LEFT' | 'RIGHT'
+    /** Multi-line anchor: first line + side. `JSON.stringify` drops them when undefined. */
+    start_line?: number
+    start_side?: 'LEFT' | 'RIGHT'
   },
 ): Promise<CreatedComment> {
   return (await githubFetch(`/repos/${repo}/pulls/${prNumber}/comments`, {

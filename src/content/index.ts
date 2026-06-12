@@ -10,8 +10,16 @@ import {
   type GithubResult,
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
-import { captureSelection, type SelectionContext } from './selection'
-import { CANNED_COMMENTS, insertComment, trackCommentFields } from './comments'
+import { captureSelection, reviewTarget, type SelectionContext } from './selection'
+import {
+  CANNED_COMMENTS,
+  CC_LABELS,
+  CC_DECORATIONS,
+  conventionalPrefix,
+  insertComment,
+  prependComment,
+  trackCommentFields,
+} from './comments'
 import { DOCK_SELECTOR, DockPanel } from './dock/dock-panel'
 
 // Presence marker: load signal + double-injection guard (visible to page context).
@@ -37,12 +45,12 @@ function selectionLabel(s: SelectionContext): string {
 }
 
 /** Send one ask over a fresh port and stream the reply into the dock. */
-function ask(request: AskRequest, dock: DockPanel): void {
+function ask(request: AskRequest, dock: DockPanel, display?: string): void {
   const id = crypto.randomUUID()
   const port = chrome.runtime.connect({ name: PORT_NAME })
   let settled = false
 
-  dock.startAnswer()
+  dock.startAnswer(request.question, display)
 
   port.onMessage.addListener((msg: BackgroundToContent) => {
     if (msg.id !== id) return
@@ -93,8 +101,46 @@ function onSubmit(dock: DockPanel, question: string): void {
         selectedCode: s.selectedCode,
         language: s.language,
       },
+      history: dock.getHistory(),
     },
     dock,
+  )
+}
+
+/** Instruction that turns an ask into a one-click-appliable GitHub suggestion. */
+const SUGGEST_INSTRUCTION =
+  'Suggest a fix for the selected code. Reply with ONLY a single GitHub suggestion block — ' +
+  'a fenced code block tagged `suggestion` containing the exact replacement for the selected ' +
+  'lines and nothing else (no prose before or after). If no change is needed, say so in one line.'
+
+/** Ask the model for a committable suggestion for the current selection. Reuses the ask
+ *  stream + the answer→comment bridge: the result lands in the answer, ready to post. */
+function onSuggest(dock: DockPanel): void {
+  const pr = parsePr()
+  if (!pr) {
+    dock.showError('Open a pull request to suggest a fix.')
+    return
+  }
+  if (!lastSelection) {
+    dock.showError('Select the code to replace in the diff first.')
+    return
+  }
+  const s = lastSelection
+  ask(
+    {
+      question: SUGGEST_INSTRUCTION,
+      context: {
+        repo: pr.repo,
+        prNumber: pr.prNumber,
+        file: s.file,
+        lineRange: s.lineRange,
+        selectedCode: s.selectedCode,
+        language: s.language,
+      },
+      history: dock.getHistory(),
+    },
+    dock,
+    'Suggest a fix',
   )
 }
 
@@ -104,8 +150,8 @@ async function postComment(dock: DockPanel, text: string): Promise<void> {
     dock.postFailed('Open a pull request first.')
     return
   }
-  const s = lastSelection
-  if (!s?.anchor || !s.file) {
+  const target = lastSelection ? reviewTarget(lastSelection) : null
+  if (!target) {
     dock.postFailed('Select a diff line first.')
     return
   }
@@ -116,9 +162,11 @@ async function postComment(dock: DockPanel, text: string): Promise<void> {
     repo: pr.repo,
     prNumber: pr.prNumber,
     body: text,
-    path: s.file,
-    line: s.anchor.line,
-    side: s.anchor.side,
+    path: target.path,
+    line: target.line,
+    side: target.side,
+    startLine: target.startLine,
+    startSide: target.startSide,
   }
   try {
     const result = (await chrome.runtime.sendMessage(message)) as GithubResult
@@ -136,12 +184,18 @@ function mount(): void {
   const dock = new DockPanel()
   currentDock = dock
   dock.onSubmit = (question) => onSubmit(dock, question)
+  dock.onSuggest = () => onSuggest(dock)
   dock.onInsertComment = (body) => {
     const inserted = insertComment(body)
     dock.flashTray(inserted ? 'Inserted' : 'Focus a GitHub comment box first', inserted)
   }
+  dock.onApplyLabel = (label, decoration) => {
+    const applied = prependComment(conventionalPrefix(label.value, decoration))
+    dock.flashTray(applied ? 'Label added' : 'Focus a GitHub comment box first', applied)
+  }
   dock.onPost = (text) => void postComment(dock, text)
   dock.renderComments(CANNED_COMMENTS)
+  dock.renderLabels(CC_LABELS, CC_DECORATIONS)
   dock.mount()
   if (lastSelection) dock.setSelection(selectionLabel(lastSelection))
 }

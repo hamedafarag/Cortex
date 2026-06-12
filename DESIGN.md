@@ -108,6 +108,8 @@ interface AskRequest {
     prNumber: number
     file?: string
     lineRange?: [number, number]
+    prTitle?: string             // PR title — judge the change vs. its stated intent
+    prBody?: string              // PR description (truncated)
     selectedCode?: string
     diffHunk?: string            // surrounding diff, for grounding
     language?: string
@@ -217,6 +219,11 @@ truth.**
 - **Phase 2 (robust):** `POST /repos/{owner}/{repo}/pulls/{n}/comments` with
   `commit_id` / `path` / `line` / `side` to anchor a real review comment. Auth via
   **fine-grained PAT** entered in options.
+- **Phase 3a:** the dock can compose **Conventional Comments** prefixes
+  (`label (decoration): `) into the box, promote an AI answer into a comment (**Use as
+  comment**), and emit a committable `suggestion` block (**Suggest a fix**). Posting gained
+  optional `start_line` / `start_side`, so a multi-line selection (or suggestion) anchors to
+  the whole range.
 
 ---
 
@@ -225,9 +232,13 @@ truth.**
 - A plain `<div>` host with an **attached shadow root** (content scripts can't register
   custom elements — `customElements` is null), mounted by the content script; CSS inlined
   into the shadow root for full isolation.
-- Pinned to the bottom of the viewport, collapsible.
-- Sections: a conversation/answer area (renders streamed markdown) and an input;
-  a canned-comments tray (Phase 1b).
+- **Collapsed by default** to a small Cortex **launcher button** (bottom-right); clicking it
+  expands a **full-width** panel pinned to the bottom of the viewport, and the header collapses
+  it back to the button — so the dock never blocks page content unless the reviewer opens it.
+- Sections: an answer area that renders the streamed-markdown **conversation thread**
+  (threaded follow-ups via `history` + a **New thread** reset) with answer→comment actions
+  (**Use as comment** / Copy); an **Insert** tray (canned snippets) and a **Label** tray
+  (Conventional Comments); and a composer with **Ask** / **Suggest a fix** / **Post to line**.
 - No framework — vanilla DOM + Web Components, per decision.
 
 ### Port protocol (content ↔ background)
@@ -261,7 +272,7 @@ bg → content: { type: 'ERROR', id, message }
 
 ```
 YourCodeReviewAssistant/          # repo dir (product name: Cortex)
-├─ README.md · DESIGN.md · PLAN.md · COMPETITORS.md
+├─ README.md · DESIGN.md · PLAN.md · COMPETITORS.md · FEATURE-LANDSCAPE.md · CHANGELOG.md · CLAUDE.md
 ├─ package.json · tsconfig.json · vite.config.ts
 ├─ manifest.config.ts          # CRXJS MV3 manifest (fixed "key", icons)
 ├─ scripts/gen-icons.mjs        # SVG → PNG icon generator (npm run icons)
@@ -289,6 +300,7 @@ YourCodeReviewAssistant/          # repo dir (product name: Cortex)
 │  └─ shared/
 │     ├─ types.ts              # AskContext/AskRequest/Chunk/ProviderId
 │     ├─ messages.ts           # port + native + GitHub protocol types
+│     ├─ prompt.ts             # buildUserContent (shared by the API provider; host mirrors)
 │     └─ storage.ts            # settings get/set
 └─ native-host/                # NOT bundled by Vite — installed separately
    ├─ reviewer-host.mjs        # Node native-messaging host (lean claude -p)
@@ -304,7 +316,7 @@ YourCodeReviewAssistant/          # repo dir (product name: Cortex)
 | **1** | Dock panel + highlight-and-ask, **both** providers, options page (provider toggle + key + model). Read-only w.r.t. GitHub. |
 | **1b** | Canned comments via DOM insert. |
 | **2** | GitHub API (PAT): authoritative diff fetch + posting real line-anchored comments. |
-| **3** | "Review whole file/PR" summaries, per-selection threaded follow-ups, severity tags. |
+| **3** | **From answer to action** — make AI output land as real, well-labeled review comments: answer→comment bridge, PR-intent grounding, committable suggestions, Conventional Comments labels, threaded follow-ups, whole-file/PR review. See `PLAN.md`. |
 | **Later** | GitLab/Bitbucket — only the content-script DOM layer is new; dock + providers reusable. |
 
 ---
