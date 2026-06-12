@@ -137,8 +137,11 @@ Still reviewer-driven, on demand, never autonomous.
 ### 3b. On-demand review depth
 - [ ] **Whole-file / whole-PR review** — feed the full file patch (not one hunk) / all file
   patches and return a findings list; each finding promotable to a comment via 3a.
-- [ ] **AI PR summary** — a "Summarize PR" button: stream a TL;DR + key changes from the file
-  patches into the answer area. Fold in a per-file one-line gloss and a 1–5 effort badge.
+- [x] **AI PR summary** — a **Summarize PR** button (no selection needed) fetches all changed-file
+  diffs (budgeted via `assemblePatches`/`getPrPatches`) and streams a structured summary —
+  TL;DR · key changes · per-file gloss · **Review effort 1–5** — into the answer area as a thread
+  turn (so follow-ups work). The `mode: 'summary'` ask carries `context.prPatches`; both prompt
+  builders render it. *Verified: 11 Node + 5 dock assertions + live on a real GitHub PR in Edge.*
 - [ ] **Severity tags on findings** — structured label per finding, rendered icon + label
   (color-blind-safe), for blocker-vs-nit triage.
 - [ ] **Specialist lenses** — preset Security / Performance / Error-handling / Readability

@@ -144,6 +144,35 @@ function onSuggest(dock: DockPanel): void {
   )
 }
 
+/** Instruction for the whole-PR summary (the background attaches all file diffs). */
+const SUMMARY_INSTRUCTION =
+  'Summarize this pull request for a reviewer about to review it, grounded only in the ' +
+  'provided diffs and PR description. Structure the answer as:\n\n' +
+  '**TL;DR** — 1–2 sentences: what it does and why.\n\n' +
+  '**Key changes** — a short bullet list of the substantive changes (skip pure formatting/noise).\n\n' +
+  '**By file** — a one-line gloss for the most important changed files (skip trivial ones).\n\n' +
+  '**Review effort: N/5** — a 1–5 rating (1 = rubber-stamp, 5 = needs deep, careful review) with a one-line reason.\n\n' +
+  'Be concise and concrete.'
+
+/** Summarize the whole PR — no selection needed; the background fetches all file patches. */
+function onSummarize(dock: DockPanel): void {
+  const pr = parsePr()
+  if (!pr) {
+    dock.showError('Open a pull request to summarize it.')
+    return
+  }
+  ask(
+    {
+      question: SUMMARY_INSTRUCTION,
+      context: { repo: pr.repo, prNumber: pr.prNumber },
+      history: dock.getHistory(),
+      mode: 'summary',
+    },
+    dock,
+    'Summarize PR',
+  )
+}
+
 async function postComment(dock: DockPanel, text: string): Promise<void> {
   const pr = parsePr()
   if (!pr) {
@@ -185,6 +214,7 @@ function mount(): void {
   currentDock = dock
   dock.onSubmit = (question) => onSubmit(dock, question)
   dock.onSuggest = () => onSuggest(dock)
+  dock.onSummarize = () => onSummarize(dock)
   dock.onInsertComment = (body) => {
     const inserted = insertComment(body)
     dock.flashTray(inserted ? 'Inserted' : 'Focus a GitHub comment box first', inserted)

@@ -238,7 +238,8 @@ truth.**
 - Sections: an answer area that renders the streamed-markdown **conversation thread**
   (threaded follow-ups via `history` + a **New thread** reset) with answer→comment actions
   (**Use as comment** / Copy); an **Insert** tray (canned snippets) and a **Label** tray
-  (Conventional Comments); and a composer with **Ask** / **Suggest a fix** / **Post to line**.
+  (Conventional Comments); and a composer with **Summarize PR** (whole-PR overview, no
+  selection) / **Suggest a fix** / **Ask** / **Post to line**.
 - No framework — vanilla DOM + Web Components, per decision.
 
 ### Port protocol (content ↔ background)

@@ -16,6 +16,7 @@ export type IconName =
   | 'copy'
   | 'wand'
   | 'tag'
+  | 'list'
 
 const PATHS: Record<IconName, string> = {
   // A small synapse / node cluster — the Cortex mark.
@@ -48,6 +49,8 @@ const PATHS: Record<IconName, string> = {
   tag:
     '<path d="M12.6 2.6 21 11a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6Z"/>' +
     '<circle cx="7.5" cy="7.5" r="1.1"/>',
+  // Bulleted list — "summarize the PR".
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
 }
 
 export function icon(name: IconName, size = 16): string {

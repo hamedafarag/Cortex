@@ -28,6 +28,10 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   receives the prior turns (`AskRequest.history`, wired through both the API provider and the
   CLI host). The answer area shows the thread (questions + answers); a **New thread** button
   resets it. (Phase 3a)
+- **AI PR summary** — a **Summarize PR** button (no selection needed) fetches all changed-file
+  diffs (budgeted) and streams a structured summary — TL;DR, key changes, a per-file gloss, and
+  a **1–5 review-effort** rating — into the dock as a thread turn, so you can ask follow-ups.
+  (Phase 3b)
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated

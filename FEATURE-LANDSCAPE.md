@@ -73,7 +73,7 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
-| AI PR summary / TL;DR (whole-PR walkthrough) | CodeRabbit, Copilot, Qodo `/describe`, Graphite, What The Diff | 🟡 | M / High |
+| AI PR summary / TL;DR (whole-PR walkthrough) | CodeRabbit, Copilot, Qodo `/describe`, Graphite, What The Diff | ✅ | M / High |
 | Per-file changes table (blast-radius map) | CodeRabbit, Qodo `/describe` | ⬜ | M / M |
 | Estimated review-effort score (1–5) | CodeRabbit, Qodo | ⬜ | L / M |
 | PR title/body/commit context injection | CodeRabbit, Qodo, Greptile, Korbit | ✅ | L / High |

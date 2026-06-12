@@ -63,6 +63,9 @@ export function buildPrompt(request) {
   if (context.diffHunk) {
     parts.push(`Surrounding diff:\n\`\`\`diff\n${context.diffHunk}\n\`\`\``)
   }
+  if (context.prPatches) {
+    parts.push(`Changed files (diffs):\n\`\`\`diff\n${context.prPatches}\n\`\`\``)
+  }
   parts.push(`Question: ${question}`)
   return parts.join('\n\n')
 }

@@ -15,7 +15,13 @@ import type { AskRequest } from '../shared/types'
 import { registry, NoProviderAvailableError } from './providers/registry'
 import { AnthropicProvider } from './providers/anthropic'
 import { ClaudeCodeProvider } from './providers/claudeCode'
-import { getPullHeadSha, createReviewComment, getDiffHunk, getPullMeta } from './github/api'
+import {
+  getPullHeadSha,
+  createReviewComment,
+  getDiffHunk,
+  getPullMeta,
+  getPrPatches,
+} from './github/api'
 
 console.debug('[YCRA] background service worker loaded')
 
@@ -75,7 +81,23 @@ chrome.runtime.onConnect.addListener((port) => {
     const controller = new AbortController()
     inFlight.set(id, controller)
     try {
-      await Promise.all([enrichWithDiffHunk(request), enrichWithPrMeta(request)])
+      if (request.mode === 'summary') {
+        await enrichWithPrMeta(request)
+        const patches = await getPrPatches(request.context.repo, request.context.prNumber)
+        if (!patches.text) {
+          post({ type: 'ERROR', id, message: 'No changed files to summarize in this PR.' })
+          return
+        }
+        const omitted =
+          patches.included < patches.total
+            ? `\n\n(${patches.included} of ${patches.total} changed files shown; the rest omitted for length.)`
+            : ''
+        request.context.prPatches =
+          `${patches.total} changed files (+${patches.additions} −${patches.deletions})\n\n` +
+          `${patches.text}${omitted}`
+      } else {
+        await Promise.all([enrichWithDiffHunk(request), enrichWithPrMeta(request)])
+      }
       if (controller.signal.aborted) return
       const { provider } = await registry.resolve()
       for await (const chunk of provider.ask(request, controller.signal)) {

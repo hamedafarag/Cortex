@@ -33,6 +33,8 @@ third-party server.
   the author can apply in one click; multi-line selections anchor to the whole range.
 - **Threaded follow-ups** — keep asking about the same code in one conversation; each
   follow-up carries the prior turns. **New thread** clears it.
+- **Summarize the PR** — one click streams a TL;DR + key changes + per-file gloss + a 1–5
+  review-effort rating, grounded in the actual diffs (no selection needed).
 - **Two interchangeable backends** behind one interface, with automatic fallback:
   - **Anthropic API** — your own API key, billed to your account.
   - **Claude Code CLI** — your Claude subscription, via a local native-messaging host that
@@ -151,7 +153,8 @@ and revoke the classic one when you're done.
 ## Usage
 
 1. Open any GitHub pull request — a **Cortex button** sits at the bottom-right; click it to
-   open the dock (the header chevron collapses it back to the button).
+   open the dock (the header chevron collapses it back). **Summarize PR** gives a whole-PR
+   overview without selecting anything.
 2. Highlight code in the diff — the dock's chip shows the captured `file :lines`.
 3. Type a question and click **Ask** (or ⌘/Ctrl+Enter) — or click **Suggest a fix** for a
    committable `suggestion` block on the selected lines. The answer streams in; ask follow-ups

@@ -256,6 +256,7 @@ const TEMPLATE = `
         <textarea placeholder="Ask about the code, or write a comment to post…" rows="1"></textarea>
         <div class="actions">
           <span class="post-status"></span>
+          <button type="button" class="btn summarize" title="Summarize the whole PR (no selection needed)">${icon('list', 15)} Summarize PR</button>
           <button type="button" class="btn suggest" title="Generate a committable suggestion for the selected lines">${icon('wand', 15)} Suggest a fix</button>
           <button type="button" class="btn ask">${icon('sparkles', 15)} Ask</button>
           <button type="button" class="btn post" title="Post the text above as a review comment on the selected line">${icon('comment', 15)} Post to line</button>
@@ -269,6 +270,7 @@ export class DockPanel {
   readonly host: HTMLElement
   onSubmit: ((question: string) => void) | null = null
   onSuggest: (() => void) | null = null
+  onSummarize: (() => void) | null = null
   onInsertComment: ((body: string) => void) | null = null
   onApplyLabel: ((label: ConventionalLabel, decoration: string) => void) | null = null
   onPost: ((text: string) => void) | null = null
@@ -281,6 +283,7 @@ export class DockPanel {
   private readonly inputEl: HTMLTextAreaElement
   private readonly askBtn: HTMLButtonElement
   private readonly suggestBtn: HTMLButtonElement
+  private readonly summarizeBtn: HTMLButtonElement
   private readonly postBtn: HTMLButtonElement
   private readonly postStatusEl: HTMLSpanElement
   private readonly trayChipsEl: HTMLSpanElement
@@ -312,6 +315,7 @@ export class DockPanel {
     this.inputEl = this.root.querySelector('textarea')!
     this.askBtn = this.root.querySelector('.btn.ask')!
     this.suggestBtn = this.root.querySelector('.btn.suggest')!
+    this.summarizeBtn = this.root.querySelector('.btn.summarize')!
     this.postBtn = this.root.querySelector('.btn.post')!
     this.postStatusEl = this.root.querySelector('.post-status')!
     this.trayChipsEl = this.root.querySelector('.tray-chips')!
@@ -331,6 +335,9 @@ export class DockPanel {
     this.askBtn.addEventListener('click', () => this.submit())
     this.suggestBtn.addEventListener('click', () => {
       if (!this.streaming) this.onSuggest?.()
+    })
+    this.summarizeBtn.addEventListener('click', () => {
+      if (!this.streaming) this.onSummarize?.()
     })
     this.postBtn.addEventListener('click', () => {
       const text = this.inputEl.value.trim()
@@ -485,6 +492,7 @@ export class DockPanel {
     this.streaming = true
     this.askBtn.disabled = true
     this.suggestBtn.disabled = true
+    this.summarizeBtn.disabled = true
     this.host.removeAttribute('collapsed')
     this.rawAnswer = ''
     this.pendingQuestion = question
@@ -511,6 +519,7 @@ export class DockPanel {
     this.streaming = false
     this.askBtn.disabled = false
     this.suggestBtn.disabled = false
+    this.summarizeBtn.disabled = false
     if (this.rawAnswer.trim() && this.pendingQuestion != null) {
       // Commit the exchange; keep rawAnswer so "Use as comment" can act on the latest answer.
       this.turns.push({ role: 'user', content: this.pendingQuestion, display: this.pendingDisplay })
@@ -532,6 +541,7 @@ export class DockPanel {
     this.streaming = false
     this.askBtn.disabled = false
     this.suggestBtn.disabled = false
+    this.summarizeBtn.disabled = false
     this.host.removeAttribute('collapsed')
     this.showAnswerActions(false)
     this.pendingQuestion = null

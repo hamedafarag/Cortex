@@ -81,6 +81,8 @@ export async function getPullMeta(repo: string, prNumber: number): Promise<PullM
 export interface PullFile {
   filename: string
   status: string
+  additions?: number
+  deletions?: number
   /** Unified-diff hunk(s) for this file; absent for binary/too-large files. */
   patch?: string
 }
@@ -164,6 +166,53 @@ export async function getDiffHunk(
     (f) => f.filename === file,
   )?.patch
   return patch ? findHunk(patch, line) : undefined
+}
+
+// --- Whole-PR patch view (for the summary) -------------------------------------
+
+export interface PrPatches {
+  /** Budgeted, diff-annotated view of the changed files. */
+  text: string
+  /** Files that made it into `text` vs the total (the rest were dropped for length). */
+  included: number
+  total: number
+  additions: number
+  deletions: number
+}
+
+const PATCH_TOTAL_BUDGET = 16000
+const PATCH_PER_FILE_CAP = 2500
+
+/** Assemble a budgeted view of all changed files' diffs for whole-PR tasks. Pure, so the
+ *  budgeting is unit-testable. Big files are capped; once the total budget is hit the
+ *  remaining files are dropped (reported via `included`/`total`). */
+export function assemblePatches(files: PullFile[]): PrPatches {
+  let additions = 0
+  let deletions = 0
+  for (const f of files) {
+    additions += f.additions ?? 0
+    deletions += f.deletions ?? 0
+  }
+  const blocks: string[] = []
+  let used = 0
+  let included = 0
+  for (const f of files) {
+    let patch = f.patch ?? '(no textual diff — binary or too large)'
+    if (patch.length > PATCH_PER_FILE_CAP) {
+      patch = `${patch.slice(0, PATCH_PER_FILE_CAP)}\n… (file diff truncated)`
+    }
+    const block = `--- ${f.filename} (${f.status}, +${f.additions ?? 0} −${f.deletions ?? 0})\n${patch}`
+    if (included > 0 && used + block.length > PATCH_TOTAL_BUDGET) break
+    blocks.push(block)
+    used += block.length
+    included += 1
+  }
+  return { text: blocks.join('\n\n'), included, total: files.length, additions, deletions }
+}
+
+/** All changed files' diffs for the PR, budgeted for a whole-PR summary. */
+export async function getPrPatches(repo: string, prNumber: number): Promise<PrPatches> {
+  return assemblePatches(await getPullFilesCached(repo, prNumber))
 }
 
 /** Post a line-anchored review comment on the PR diff. */
