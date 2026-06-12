@@ -215,6 +215,93 @@ export async function getPrPatches(repo: string, prNumber: number): Promise<PrPa
   return assemblePatches(await getPullFilesCached(repo, prNumber))
 }
 
+// --- Test-gap heuristic (path-based; an approximation, not coverage) ------------
+
+/** Source-code file extensions we consider "should probably have a test". */
+const SOURCE_EXT_RE =
+  /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rb|java|kt|kts|cs|swift|rs|php|scala|c|cc|cpp|cxx|h|hpp|m|mm)$/i
+
+/** A changed file is a test if its path matches any common test convention. */
+export function isTestFile(path: string): boolean {
+  const lower = path.toLowerCase()
+  return (
+    /\.(test|spec)\.[cm]?[jt]sx?$/.test(lower) || // foo.test.ts / foo.spec.jsx
+    /\.(test|spec)-d\.ts$/.test(lower) || // foo.test-d.ts (tsd type tests)
+    /(^|\/)(tests?|specs?)\.[cm]?[jt]sx?$/.test(lower) || // whole-file test.js / tests.ts / spec.mjs
+    /(^|\/)(tests?|specs?|__tests__|__mocks__|e2e|cypress)\//.test(lower) || // tests/ __tests__/ …
+    /_test\.(go|py|rb)$/.test(lower) || // foo_test.go / foo_test.py
+    /(^|\/)test_[^/]*\.py$/.test(lower) || // test_foo.py
+    /_spec\.rb$/.test(lower) || // foo_spec.rb
+    /tests?\.(java|kt|cs|swift)$/.test(lower) // FooTest.java / FooTests.cs
+  )
+}
+
+/** A changed file is "source" if it has a code extension and isn't itself a test. */
+function isSourceFile(path: string): boolean {
+  return SOURCE_EXT_RE.test(path) && !isTestFile(path)
+}
+
+/** Strip directory + extension + common test affixes to a bare basename token. */
+function baseToken(path: string): string {
+  const name = path.split('/').pop() ?? path
+  return name
+    .replace(/\.[^.]+$/, '') // drop extension
+    .replace(/[._-](test|spec)$/i, '') // drop trailing .test / -spec
+    .replace(/^test[._-]/i, '') // drop leading test_
+    .toLowerCase()
+}
+
+export interface TestGaps {
+  /** Changed, non-deleted source files with no matching test change. */
+  uncovered: string[]
+  /** How many source files changed in total (non-deleted). */
+  sourceCount: number
+  /** How many test files changed. */
+  testCount: number
+}
+
+/** Which changed source files have no matching test change? Tests are matched to sources by
+ *  basename token (`foo.ts` ↔ `foo.test.ts` / `test_foo.py`). Deleted files are ignored.
+ *  A coarse approximation — it answers "did tests move with the code?", not real coverage. */
+export function testGaps(files: PullFile[]): TestGaps {
+  const live = files.filter((f) => f.status !== 'removed')
+  const tests = live.filter((f) => isTestFile(f.filename))
+  const sources = live.filter((f) => isSourceFile(f.filename))
+  const testTokens = tests.map((f) => baseToken(f.filename))
+  const uncovered = sources
+    .filter((s) => {
+      const token = baseToken(s.filename)
+      // Covered if a changed test matches by basename: an exact token match always counts
+      // (`a.ts`↔`a.test.ts`); a substring match (`foo`↔`foo.integration`) counts only when the
+      // shorter token is specific enough that the overlap isn't coincidental.
+      const covered = testTokens.some((t) => {
+        if (t === token) return true
+        return Math.min(t.length, token.length) >= 3 && (t.includes(token) || token.includes(t))
+      })
+      return !covered
+    })
+    .map((s) => s.filename)
+  return { uncovered, sourceCount: sources.length, testCount: tests.length }
+}
+
+/** Render the test-gap heuristic as a dock-ready markdown report. */
+export function formatTestGapsReport(gaps: TestGaps): string {
+  const head =
+    `**Test-gap check** — heuristic, by file path (an approximation, not coverage).\n\n` +
+    `${gaps.sourceCount} changed source file(s); ${gaps.testCount} test file(s) changed.`
+  if (gaps.sourceCount === 0) {
+    return `${head}\n\nNo source files changed — nothing to flag.`
+  }
+  if (gaps.uncovered.length === 0) {
+    return `${head}\n\n✅ **No gaps found** — every changed source file has a matching test change.`
+  }
+  const list = gaps.uncovered.map((f) => `- \`${f}\``).join('\n')
+  return (
+    `${head}\n\n⚠️ **${gaps.uncovered.length} source file(s) changed with no matching test change:**\n\n` +
+    `${list}\n\n_Heuristic match by file name — confirm before asking the author for tests._`
+  )
+}
+
 /** Post a line-anchored review comment on the PR diff. */
 export async function createReviewComment(
   repo: string,

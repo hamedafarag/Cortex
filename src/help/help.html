@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cortex — Features</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff; --surface: #ffffff; --muted-bg: #f6f8fa; --inset: #eef1f4;
+        --fg: #1f2328; --fg-muted: #59636e; --border: #d1d9e0;
+        --accent: #0969da; --success: #1a7f37; --danger: #d1242f; --attention: #9a6700;
+        --cortex: #6b5cf6; --tip-bg: #f3f1ff; --tip-bd: #6b5cf64d;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1117; --surface: #151b23; --muted-bg: #151b23; --inset: #212830;
+          --fg: #e6edf3; --fg-muted: #9198a1; --border: #2f3742;
+          --accent: #4493f8; --success: #3fb950; --danger: #f85149; --attention: #d29922;
+          --cortex: #a78bfa; --tip-bg: #1b1733; --tip-bd: #a78bfa55;
+        }
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0; color: var(--fg); background: var(--bg);
+      }
+      a { color: var(--accent); }
+      code { font-family: var(--mono); font-size: .86em; background: var(--inset); padding: 1px 5px; border-radius: 5px; }
+
+      /* ── top bar ── */
+      .topbar {
+        position: sticky; top: 0; z-index: 10;
+        display: flex; align-items: center; gap: 10px;
+        padding: 12px 24px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
+      }
+      .topbar .mark { color: var(--cortex); display: grid; place-items: center; }
+      .topbar .name { font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 14px; }
+      .topbar .tag { color: var(--fg-muted); font-size: 12px; }
+      .topbar .spacer { flex: 1; }
+      .topbar a { font-size: 13px; font-weight: 600; text-decoration: none; }
+      @media (max-width: 560px) { .topbar .tag { display: none; } }
+
+      .wrap { max-width: 940px; margin: 0 auto; padding: 0 24px 80px; }
+
+      /* ── hero ── */
+      .hero { text-align: center; padding: 56px 0 36px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+      .hero .edge { width: 64px; height: 3px; margin: 0 auto 22px; border-radius: 3px;
+        background: linear-gradient(90deg, var(--cortex), color-mix(in srgb, var(--cortex) 30%, transparent)); }
+      .hero h1 { font-size: 34px; line-height: 1.15; margin: 0 0 12px; letter-spacing: -.01em; }
+      .hero h1 .grad { color: var(--cortex); }
+      .hero p { font-size: 16px; color: var(--fg-muted); max-width: 620px; margin: 0 auto; }
+
+      /* ── feature rows ── */
+      .feature {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: center;
+        padding: 44px 0; border-bottom: 1px solid var(--border);
+      }
+      .feature:nth-child(even) .shot { order: 2; }
+      @media (max-width: 760px) { .feature { grid-template-columns: 1fr; gap: 18px; }
+        .feature:nth-child(even) .shot { order: 0; } }
+      .feature .kicker {
+        display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .07em; color: var(--cortex); margin-bottom: 10px;
+      }
+      .feature .kicker .icon { color: var(--cortex); }
+      .feature h2 { font-size: 22px; margin: 0 0 10px; letter-spacing: -.01em; }
+      .feature p { margin: 0 0 10px; color: var(--fg-muted); }
+      .feature .meta { font-size: 13px; color: var(--fg-muted); }
+      .feature .meta b { color: var(--fg); font-weight: 600; }
+      .shot {
+        margin: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+        background: var(--muted-bg); box-shadow: 0 10px 34px rgba(0,0,0,.10);
+      }
+      .shot img { display: block; width: 100%; height: auto; }
+      .shot figcaption {
+        font-family: var(--mono); font-size: 11px; color: var(--fg-muted);
+        padding: 7px 12px; border-top: 1px solid var(--border); background: var(--surface);
+      }
+
+      /* ── secondary grid ── */
+      .more { padding: 44px 0 8px; }
+      .more h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: var(--fg-muted); margin: 0 0 18px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+      .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+      .tile .icon { color: var(--cortex); }
+      .tile h3 { font-size: 15px; margin: 8px 0 6px; }
+      .tile p { font-size: 13px; color: var(--fg-muted); margin: 0; }
+
+      /* ── severity legend ── */
+      .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+      .sev {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+        padding: 2px 9px 2px 7px; border-radius: 999px;
+        border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+        background: color-mix(in srgb, currentColor 12%, transparent);
+      }
+      .sev .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+      .sev.blocker { color: var(--danger); } .sev.major { color: var(--attention); }
+      .sev.minor { color: var(--accent); } .sev.nit { color: var(--fg-muted); } .sev.praise { color: var(--success); }
+
+      /* ── footer ── */
+      footer { text-align: center; padding: 40px 0 0; color: var(--fg-muted); font-size: 13px; }
+      footer .pill { display: inline-block; font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; }
+      footer .links { display: flex; gap: 16px; justify-content: center; margin-top: 12px; }
+      .privacy { max-width: 600px; margin: 18px auto 0; font-size: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span class="mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="2.3"/><circle cx="5" cy="6" r="1.4"/><circle cx="19" cy="7" r="1.4"/><circle cx="6.5" cy="18.5" r="1.4"/><circle cx="18" cy="17" r="1.4"/>
+          <path d="M12 12 5.9 6.7M12 12l5.4-3.9M12 12l-4.7 5.5M12 12l4.7 4.2"/>
+        </svg>
+      </span>
+      <span class="name">Cortex</span>
+      <span class="tag">AI Review Assistant</span>
+      <span class="spacer"></span>
+      <a href="../options/options.html">Settings</a>
+    </div>
+
+    <div class="wrap">
+      <section class="hero">
+        <div class="edge"></div>
+        <h1>Everything <span class="grad">Cortex</span> can do</h1>
+        <p>An AI review copilot that lives inside the GitHub PR — highlight code, review the whole
+          change, and post line-anchored comments, all on the Claude subscription or API key you
+          already pay for. Your code never touches a third-party server.</p>
+      </section>
+
+      <!-- 1. Ask -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/ask.png" alt="Highlight code in a diff and ask Cortex a question; a streamed answer renders in the dock." />
+          <figcaption>highlight → ask → streamed answer</figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.6 4.3L18 9.5l-4.4 1.7L12 15.5l-1.6-4.3L6 9.5l4.4-1.7z"/></svg>
+            Ask about the code
+          </span>
+          <h2>Highlight &amp; ask</h2>
+          <p>Select any code in the diff and ask a question. The answer streams back in the dock,
+            grounded in the <b>authoritative diff hunk</b> and the PR's <b>title + description</b> —
+            so the model judges the change against its stated intent, not just local correctness.</p>
+          <p class="meta">Keep asking in the same <b>thread</b> — each follow-up carries the prior turns.</p>
+        </div>
+      </section>
+
+      <!-- 2. Review -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/review.png" alt="A whole-PR review: a list of findings, each tagged with a severity chip." />
+          <figcaption>Review → severity-tagged findings list</figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            Review the whole PR
+          </span>
+          <h2>Whole-PR review with severity tags</h2>
+          <p>One click (no selection needed) reviews every changed file and streams a <b>findings
+            list</b>. Each finding leads with a severity so you can triage blocker-vs-nit at a glance,
+            and promotes to a real review comment via <b>Use as comment</b>.</p>
+          <div class="legend">
+            <span class="sev blocker"><span class="dot"></span>Blocker</span>
+            <span class="sev major"><span class="dot"></span>Major</span>
+            <span class="sev minor"><span class="dot"></span>Minor</span>
+            <span class="sev nit"><span class="dot"></span>Nit</span>
+            <span class="sev praise"><span class="dot"></span>Praise</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Lenses -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/lens.png" alt="A security-lens review scoped to one dimension, labeled Review · Security." />
+          <figcaption>lens select → Review · Security</figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            Specialist lenses
+          </span>
+          <h2>Focus the review on one dimension</h2>
+          <p>Pick a lens beside <b>Review</b> to scope the pass to <b>Security</b>, <b>Performance</b>,
+            <b>Error handling</b>, or <b>Readability</b> — the model reports only findings in that
+            lens, and skips the rest.</p>
+        </div>
+      </section>
+
+      <!-- 4. Test gaps -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/testgaps.png" alt="A test-gap report listing changed source files with no matching test change." />
+          <figcaption>Test gaps → changed code without tests</figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6.5L4.6 18a2 2 0 0 0 1.7 3h11.4a2 2 0 0 0 1.7-3L14 9.5V3"/><path d="M7 15h10"/></svg>
+            Test-gap check
+          </span>
+          <h2>Spot changed code that lacks tests</h2>
+          <p>A fast, <b>no-AI</b> pass over the changed-file list flags which source files changed
+            <b>without a matching test change</b> — instant, free, and offline. An approximation by
+            file name, not coverage (and it says so).</p>
+        </div>
+      </section>
+
+      <!-- 5. Summarize -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/summary.png" alt="A whole-PR summary: TL;DR, key changes, per-file gloss, and a 1 to 5 review-effort rating." />
+          <figcaption>Summarize → TL;DR + review-effort 1–5</figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            Summarize the PR
+          </span>
+          <h2>Orient before you dive in</h2>
+          <p>A whole-PR summary — <b>TL;DR</b>, key changes, a per-file gloss, and a <b>1–5
+            review-effort</b> rating — grounded in the actual diffs, so you know what you're walking
+            into before reading a line.</p>
+        </div>
+      </section>
+
+      <!-- 6. Suggest a fix -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/suggest.png" alt="A committable GitHub suggestion block generated for the selected lines." />
+          <figcaption>Suggest a fix → committable <code>suggestion</code></figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.6 3.6-1.2-1.2a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.8l1.2 1.2a1.2 1.2 0 0 0 1.8 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8Z"/><path d="m14 7 3 3"/><path d="M5 6v4M3 8h4"/></svg>
+            Suggest a fix
+          </span>
+          <h2>One-click committable suggestions</h2>
+          <p>Ask for a fix on the selected lines and get a GitHub <code>suggestion</code> block the
+            author can apply in one click. Multi-line selections anchor to the whole range.</p>
+        </div>
+      </section>
+
+      <!-- 7. Comments + labels -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/comments.png" alt="The Insert tray of canned comments and the Conventional Comments label tray." />
+          <figcaption>Insert snippets · Conventional Comments labels</figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>
+            Faster, clearer comments
+          </span>
+          <h2>Canned snippets &amp; Conventional Comments</h2>
+          <p>Drop in out-of-the-box review snippets, or prepend a <b>Conventional Comments</b> label
+            (<code>suggestion</code>, <code>issue</code>, <code>nit</code>, … · blocking /
+            non-blocking / if-minor) so authors instantly see what's blocking vs. optional. Then
+            <b>Post to line</b> sends it as a line-anchored review comment.</p>
+        </div>
+      </section>
+
+      <!-- secondary -->
+      <section class="more">
+        <h2>And the foundations</h2>
+        <div class="grid">
+          <div class="tile">
+            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+            <h3>Two interchangeable backends</h3>
+            <p>Your <b>Anthropic API key</b> or your <b>Claude subscription</b> (via the Claude Code
+              CLI native host), behind one interface with automatic fallback.</p>
+          </div>
+          <div class="tile">
+            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c-5 0-9-4-9-9z"/></svg>
+            <h3>Native, adaptive UI</h3>
+            <p>The dock inherits GitHub's light/dark Primer theme so it feels built-in — and every
+              status pairs colour with an <b>icon + label</b> (color-blind safe).</p>
+          </div>
+          <div class="tile">
+            <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h3>Local &amp; private</h3>
+            <p>Keys and token live only in your browser. Code goes only to Anthropic (your account)
+              and <code>api.github.com</code> (your token). No third-party SaaS.</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <p><span class="pill" id="version">v0.1.0</span></p>
+        <div class="links">
+          <a href="../options/options.html">Open settings</a>
+          <a href="https://github.com/hamedafarag/Cortex" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+        <p class="privacy">🔒 Cortex is a human-in-the-loop copilot: it never reviews or posts on its
+          own. You highlight, you ask, you click post — every public write is yours.</p>
+      </footer>
+    </div>
+  </body>
+</html>

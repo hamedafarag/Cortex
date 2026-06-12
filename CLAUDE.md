@@ -28,13 +28,17 @@ a native-messaging host). No third-party SaaS. GitHub-only.
   network.
   - `providers/` — `LlmProvider` interface + `registry.ts` (pick from settings, fall back).
     `anthropic.ts` (SDK streaming), `claudeCode.ts` (`connectNative` client).
-  - `github/api.ts` — PAT-authed REST: head sha, PR title/body, files/patch (diff grounding), post comment (single- or multi-line).
+  - `github/api.ts` — PAT-authed REST: head sha, PR title/body, files/patch (diff grounding), budgeted whole-PR patches (summary/review), a pure path-based **test-gap** heuristic, post comment (single- or multi-line).
 - `src/content/` — injected on github.com. `index.ts` mounts the dock, **tracks the last
   diff selection**, bridges ask/post. `dock/dock-panel.ts` = the UI, `dock/icons.ts` =
   inline SVGs. `selection.ts` = DOM → `{file, line, side, code}` + `reviewTarget` (post anchor,
   multi-line aware). `comments.ts` = canned comments + Conventional Comments labels,
   insert/prepend into GitHub's textarea.
 - `src/options/` — options page (backend, key, model, PAT, About).
+- `src/help/help.html` — the **features page** opened by the dock's `?` button. An extra CRXJS
+  build input (declared in `vite.config.ts`'s `rollupOptions.input`) → emitted to
+  `dist/src/help/help.html`; opened via the background's `chrome.tabs.create`. Screenshots live in
+  `public/help/*.png` (copied to `dist/help/`). Static HTML/CSS, no module script (MV3 CSP).
 - `src/shared/` — `types.ts`, `messages.ts` (wire protocols), `storage.ts` (settings),
   `prompt.ts` (`buildUserContent`; the native host mirrors it).
 - `native-host/reviewer-host.mjs` — Node host; shells lean `claude -p`. `install.sh`

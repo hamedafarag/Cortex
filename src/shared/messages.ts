@@ -119,12 +119,34 @@ export interface PostCommentMessage {
   startSide?: 'LEFT' | 'RIGHT'
 }
 
-export type GithubRequest = PostCommentMessage
+/** content -> background: run the deterministic test-gap heuristic over the PR's file list.
+ *  No LLM call — pure path analysis in the background (which holds the cached file list). */
+export interface TestGapsMessage {
+  type: 'GH_TEST_GAPS'
+  repo: string
+  prNumber: number
+}
+
+/** content -> background: open the bundled features/help page in a new tab. The background
+ *  owns `chrome.tabs`, which content scripts can't call. */
+export interface OpenHelpMessage {
+  type: 'OPEN_HELP'
+}
+
+export type GithubRequest = PostCommentMessage | TestGapsMessage | OpenHelpMessage
 
 /** background -> content: result of a GitHub operation. */
 export interface GithubResult {
   ok: boolean
   /** HTML URL of the created comment, on success. */
   url?: string
+  error?: string
+}
+
+/** background -> content: the rendered test-gap report (markdown), or an error. */
+export interface TestGapsResult {
+  ok: boolean
+  /** Markdown report, on success. */
+  report?: string
   error?: string
 }

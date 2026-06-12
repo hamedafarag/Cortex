@@ -135,19 +135,32 @@ Still reviewer-driven, on demand, never autonomous.
   + screenshot.*
 
 ### 3b. On-demand review depth
-- [ ] **Whole-file / whole-PR review** — feed the full file patch (not one hunk) / all file
-  patches and return a findings list; each finding promotable to a comment via 3a.
+- [x] **Whole-PR review** — a **Review** button (no selection needed) reuses the summary's
+  patch pipeline (`mode: 'review'` → `getPrPatches`) and streams a **findings list** into the
+  answer as a thread turn. Each finding leads with a severity and a `path:line`, and rides the
+  3a answer→comment bridge (Use as comment → Post to line). *(Whole-single-file review is
+  subsumed: the whole-PR review already reads every changed file's full patch.)*
 - [x] **AI PR summary** — a **Summarize PR** button (no selection needed) fetches all changed-file
   diffs (budgeted via `assemblePatches`/`getPrPatches`) and streams a structured summary —
   TL;DR · key changes · per-file gloss · **Review effort 1–5** — into the answer area as a thread
   turn (so follow-ups work). The `mode: 'summary'` ask carries `context.prPatches`; both prompt
   builders render it. *Verified: 11 Node + 5 dock assertions + live on a real GitHub PR in Edge.*
-- [ ] **Severity tags on findings** — structured label per finding, rendered icon + label
-  (color-blind-safe), for blocker-vs-nit triage.
-- [ ] **Specialist lenses** — preset Security / Performance / Error-handling / Readability
-  buttons that scope the system prompt for one turn (prompt templating over the ask path).
-- [ ] **Test-gap call-out** — a heuristic "which changed source files have no matching test
-  changes?" pass over the file list (tests detected by path). An approximation, not coverage.
+- [x] **Severity tags on findings** — each review finding leads with **Blocker / Major / Minor /
+  Nit / Praise**; the dock's `decorateSeverities` pass upgrades that leading word into a
+  **color-blind-safe chip** (icon **+** label, Primer-tinted) post-render. Runs on already-sanitized
+  DOM via DOM APIs (nothing new for DOMPurify), and no-ops on plain answers/summaries.
+- [x] **Specialist lenses** — a **lens select** (General / Security / Performance / Error
+  handling / Readability) next to **Review** scopes that whole-PR review to one dimension by
+  templating the instruction over the ask path (no system-prompt fork → no per-runtime mirror).
+- [x] **Test-gap call-out** — a **Test gaps** button runs a deterministic, **no-LLM** path
+  heuristic (`testGaps`) in the background over the changed-file list — which changed source
+  files have no matching test change (matched by basename) — and renders the report as an instant
+  answer turn. An approximation, not coverage (the report says so). *Verified: 33 Node + 28 dock
+  assertions (headless Chrome) + screenshot; corrected live on a real PR (root `test.js` / `.test-d.ts`).*
+- [x] **In-app features page** — a **?** button in the dock header opens a built-in, extension-served
+  **features page** (`src/help/help.html`, a CRXJS build input → `chrome-extension://…`, adaptive
+  light/dark) in a new tab via the background (`chrome.tabs.create`). Each feature has a screenshot
+  (`public/help/*.png`). *Verified: renders end-to-end with images served from `dist/`.*
 
 ### 3c. Persistence & trust
 - [ ] **Persist per PR** — store conversation turns + draft comments keyed by

@@ -35,6 +35,13 @@ third-party server.
   follow-up carries the prior turns. **New thread** clears it.
 - **Summarize the PR** — one click streams a TL;DR + key changes + per-file gloss + a 1–5
   review-effort rating, grounded in the actual diffs (no selection needed).
+- **Review the whole PR** — one click streams a **findings list** grounded in every changed
+  file's diff (no selection needed). Each finding is tagged **Blocker / Major / Minor / Nit /
+  Praise** as a **color-blind-safe chip** (icon + label) for instant triage, and rides the
+  answer→comment bridge so you can post it. A **lens** selector focuses the review on
+  **Security / Performance / Error handling / Readability**.
+- **Test-gap check** — one click flags which changed source files have **no matching test
+  change** (a fast, no-AI file-name heuristic — an approximation, not coverage).
 - **Two interchangeable backends** behind one interface, with automatic fallback:
   - **Anthropic API** — your own API key, billed to your account.
   - **Claude Code CLI** — your Claude subscription, via a local native-messaging host that
@@ -51,6 +58,9 @@ third-party server.
   status (icon + label, never colour alone).
 - **Local & private** — keys/token live only in your browser; code goes only to Anthropic
   (your account) and `api.github.com` (your token). No third-party SaaS.
+- **Built-in features page** — a **?** button in the dock header opens an in-app
+  features tour (with screenshots) in a new tab — served by the extension itself, no internet
+  needed.
 
 ---
 
@@ -153,8 +163,9 @@ and revoke the classic one when you're done.
 ## Usage
 
 1. Open any GitHub pull request — a **Cortex button** sits at the bottom-right; click it to
-   open the dock (the header chevron collapses it back). **Summarize PR** gives a whole-PR
-   overview without selecting anything.
+   open the dock (the header chevron collapses it back). The **Whole PR** toolbar needs no
+   selection: **Summarize** for an overview, **Review** (with an optional lens) for a tagged
+   findings list, or **Test gaps** for the no-AI test-coverage heuristic.
 2. Highlight code in the diff — the dock's chip shows the captured `file :lines`.
 3. Type a question and click **Ask** (or ⌘/Ctrl+Enter) — or click **Suggest a fix** for a
    committable `suggestion` block on the selected lines. The answer streams in; ask follow-ups
@@ -220,9 +231,10 @@ rm ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.ycra.re
 
 See [PLAN.md](PLAN.md) and [CHANGELOG.md](CHANGELOG.md). Now in **Phase 3 — from answer to
 action**: making AI output land as real, well-labeled review comments. **Done (Phase 3a):**
-answer→comment bridge, PR-intent grounding, committable `suggestion` blocks, and Conventional
-Comments labels. **Next:** threaded follow-ups, then whole-PR review and severity-tagged
-findings.
+answer→comment bridge, PR-intent grounding, committable `suggestion` blocks, Conventional
+Comments labels, threaded follow-ups. **Done (Phase 3b):** PR summary, whole-PR review with
+severity-tagged findings, specialist lenses, and a test-gap check. **Next:** Phase 3c —
+persistence per PR, confirm/undo before posting, and secret redaction.
 
 ---
 

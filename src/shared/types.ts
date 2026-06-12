@@ -39,8 +39,9 @@ export interface AskRequest {
   context: AskContext
   /** Prior turns, oldest first, for multi-turn follow-ups. */
   history?: ChatMessage[]
-  /** 'summary' makes the background fetch all file patches and ask for a whole-PR summary. */
-  mode?: 'ask' | 'summary'
+  /** Whole-PR modes make the background fetch all file patches first: 'summary' asks for an
+   *  overview, 'review' asks for a findings list. 'ask' (default) is selection-scoped. */
+  mode?: 'ask' | 'summary' | 'review'
 }
 
 /** A streamed unit of a provider's response. */

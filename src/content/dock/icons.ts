@@ -17,6 +17,11 @@ export type IconName =
   | 'wand'
   | 'tag'
   | 'list'
+  | 'search'
+  | 'beaker'
+  | 'info'
+  | 'dot'
+  | 'help'
 
 const PATHS: Record<IconName, string> = {
   // A small synapse / node cluster — the Cortex mark.
@@ -51,6 +56,18 @@ const PATHS: Record<IconName, string> = {
     '<circle cx="7.5" cy="7.5" r="1.1"/>',
   // Bulleted list — "summarize the PR".
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  // Magnifier — "review the whole PR".
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  // Beaker / flask — "test-gap check".
+  beaker:
+    '<path d="M9 3h6M10 3v6.5L4.6 18a2 2 0 0 0 1.7 3h11.4a2 2 0 0 0 1.7-3L14 9.5V3"/>' +
+    '<path d="M7 15h10"/>',
+  // Circled "i" — Minor severity.
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
+  // Small filled dot — Nit severity.
+  dot: '<circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none"/>',
+  // Question mark in a circle — "what can Cortex do?" help.
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2-2.4 3.3"/><path d="M12 17h.01"/>',
 }
 
 export function icon(name: IconName, size = 16): string {
