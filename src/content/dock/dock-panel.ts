@@ -9,7 +9,7 @@
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { CannedComment, ConventionalLabel } from '../comments'
-import type { ChatMessage } from '../../shared/types'
+import type { ChatMessage, DraftComment } from '../../shared/types'
 import type { ThreadState } from '../../shared/persistence'
 import { icon, type IconName } from './icons'
 
@@ -243,6 +243,20 @@ const STYLES = `
   }
   .btn.sm:disabled { opacity: .55; cursor: default }
 
+  /* ── pending-review panel ─────────────────────────────────────────── */
+  .review-panel { border-top: 1px solid var(--border); padding: 9px 14px; }
+  .review-panel[hidden] { display: none }
+  .review-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .review-title { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-muted); font-weight: 600; }
+  .review-title b { color: var(--cortex); }
+  .review-spacer { flex: 1 }
+  .review-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 168px; overflow-y: auto; }
+  .review-list li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--muted-bg); }
+  .review-list .rc-where { font-family: var(--mono); font-size: 11px; color: var(--fg-muted); flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .review-list .rc-body { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .review-list .rc-remove { flex: none; display: inline-flex; padding: 2px; border: none; background: none; color: var(--fg-muted); cursor: pointer; border-radius: 5px; }
+  .review-list .rc-remove:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+
   /* ── composer ─────────────────────────────────────────────────────── */
   .composer { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 12px; border-top: 1px solid var(--border); }
   textarea {
@@ -340,13 +354,22 @@ const TEMPLATE = `
         </span>
         <button type="button" class="btn sm testgaps" title="Heuristic check: which changed source files have no matching test change?">${icon('beaker', 14)} Test gaps</button>
       </div>
+      <div class="review-panel" hidden>
+        <div class="review-head">
+          <span class="review-title">${icon('list', 13)} Pending review · <b class="review-count">0</b></span>
+          <span class="review-spacer"></span>
+          <button type="button" class="link-btn review-discard" title="Discard all pending comments (nothing has been posted)">Discard</button>
+        </div>
+        <ul class="review-list"></ul>
+      </div>
       <div class="composer">
         <textarea placeholder="Ask about the code, or write a comment to post…" rows="1"></textarea>
         <div class="actions">
           <span class="post-status"></span>
           <button type="button" class="btn suggest" title="Generate a committable suggestion for the selected lines">${icon('wand', 15)} Suggest a fix</button>
           <button type="button" class="btn ask">${icon('sparkles', 15)} Ask</button>
-          <button type="button" class="btn post" title="Post the text above as a review comment on the selected line">${icon('comment', 15)} Post to line</button>
+          <button type="button" class="btn addreview" title="Add the text above to a pending review — submit them together with a verdict">${icon('listPlus', 15)} Add to review</button>
+          <button type="button" class="btn post" title="Post the text above as a single review comment on the selected line">${icon('comment', 15)} Post to line</button>
         </div>
       </div>
     </div>
@@ -363,6 +386,7 @@ export class DockPanel {
   onInsertComment: ((body: string) => void) | null = null
   onApplyLabel: ((label: ConventionalLabel, decoration: string) => void) | null = null
   onPost: ((text: string) => void) | null = null
+  onAddToReview: ((text: string) => void) | null = null
   onHelp: (() => void) | null = null
   /** Fired when the persistable thread changes. `immediate` = a committed change (finish/new
    *  thread) that should be saved now; `false` = draft typing that can be debounced. */
@@ -382,6 +406,10 @@ export class DockPanel {
   private readonly testGapsBtn: HTMLButtonElement
   private readonly lensSelect: HTMLSelectElement
   private readonly postBtn: HTMLButtonElement
+  private readonly addReviewBtn: HTMLButtonElement
+  private readonly reviewPanelEl: HTMLDivElement
+  private readonly reviewListEl: HTMLUListElement
+  private readonly reviewCountEl: HTMLElement
   private readonly postStatusEl: HTMLSpanElement
   private readonly trayChipsEl: HTMLSpanElement
   private readonly trayStatusEl: HTMLSpanElement
@@ -393,6 +421,8 @@ export class DockPanel {
   private rawAnswer = ''
   /** Finalized conversation turns (oldest first); `display` overrides the shown question text. */
   private turns: (ChatMessage & { display?: string })[] = []
+  /** Pending comments accumulated into a draft review (local until submitted). */
+  private review: DraftComment[] = []
   private pendingQuestion: string | null = null
   private pendingDisplay = ''
   /** Cached HTML of finalized turns + the in-flight question, so streaming only re-renders the answer. */
@@ -418,6 +448,10 @@ export class DockPanel {
     this.testGapsBtn = this.root.querySelector('.btn.testgaps')!
     this.lensSelect = this.root.querySelector('select.lens')!
     this.postBtn = this.root.querySelector('.btn.post')!
+    this.addReviewBtn = this.root.querySelector('.btn.addreview')!
+    this.reviewPanelEl = this.root.querySelector('.review-panel')!
+    this.reviewListEl = this.root.querySelector('.review-list')!
+    this.reviewCountEl = this.root.querySelector('.review-count')!
     this.postStatusEl = this.root.querySelector('.post-status')!
     this.trayChipsEl = this.root.querySelector('.tray-chips')!
     this.trayStatusEl = this.root.querySelector('.tray-status')!
@@ -450,6 +484,15 @@ export class DockPanel {
     this.postBtn.addEventListener('click', () => {
       const text = this.inputEl.value.trim()
       if (text) this.onPost?.(text)
+    })
+    this.addReviewBtn.addEventListener('click', () => {
+      const text = this.inputEl.value.trim()
+      if (text) this.onAddToReview?.(text)
+    })
+    this.root.querySelector('.review-discard')!.addEventListener('click', () => this.clearReview())
+    this.reviewListEl.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.rc-remove') as HTMLElement | null
+      if (btn) this.removeReviewComment(Number(btn.dataset.i))
     })
     this.root.querySelector('.use-answer')!.addEventListener('click', () =>
       this.useAnswerAsComment(),
@@ -605,18 +648,20 @@ export class DockPanel {
     return this.turns.map((t) => ({ role: t.role, content: t.content }))
   }
 
-  /** The persistable state — finalized turns + the current composer draft. */
+  /** The persistable state — finalized turns + the current composer draft + the draft review. */
   getThread(): ThreadState {
     return {
       turns: this.turns.map((t) => ({ role: t.role, content: t.content, display: t.display })),
       draft: this.inputEl.value,
+      review: this.review.map((c) => ({ ...c })),
     }
   }
 
-  /** Restore a saved thread (turns + draft) on mount. Renders the conversation if any, and
-   *  re-arms "Use as comment" on the last answer. Does not fire onThreadChange (it's a load,
-   *  not a user edit) and does not expand the dock. */
+  /** Restore a saved thread (turns + draft + draft review) on mount. Renders the conversation
+   *  and the review panel. Does not fire onThreadChange (it's a load) and does not expand the dock. */
   restoreThread(state: ThreadState): void {
+    this.review = (state.review ?? []).map((c) => ({ ...c }))
+    this.renderReviewPanel()
     this.turns = state.turns.map((t) => ({ role: t.role, content: t.content, display: t.display }))
     this.inputEl.value = state.draft ?? ''
     if (this.turns.length === 0) return
@@ -628,6 +673,65 @@ export class DockPanel {
       this.rawAnswer = lastAnswer.content // so Use-as-comment / Copy act on the restored answer
       this.showAnswerActions(true)
     }
+  }
+
+  // ── pending review (batch) ─────────────────────────────────────────
+  /** Add a comment to the draft review (local until submitted) and clear the composer. */
+  addReviewComment(comment: DraftComment): void {
+    this.review.push(comment)
+    this.inputEl.value = '' // moved into the pending review
+    this.renderReviewPanel()
+    this.onThreadChange?.(true)
+    this.flashTray(`Added to review (${this.review.length})`)
+  }
+
+  /** Remove one pending comment by index. */
+  removeReviewComment(index: number): void {
+    if (index < 0 || index >= this.review.length) return
+    this.review.splice(index, 1)
+    this.renderReviewPanel()
+    this.onThreadChange?.(true)
+  }
+
+  /** Discard the whole draft review (nothing was posted). */
+  clearReview(): void {
+    if (this.review.length === 0) return
+    this.review = []
+    this.renderReviewPanel()
+    this.onThreadChange?.(true)
+  }
+
+  /** The pending comments, for submitting the review. */
+  getReview(): DraftComment[] {
+    return this.review.map((c) => ({ ...c }))
+  }
+
+  private renderReviewPanel(): void {
+    const n = this.review.length
+    this.reviewPanelEl.hidden = n === 0
+    this.reviewCountEl.textContent = String(n)
+    this.reviewListEl.replaceChildren()
+    this.review.forEach((c, i) => {
+      const li = document.createElement('li')
+      const anchor =
+        c.startLine && c.startLine !== c.line ? `${c.path}:${c.startLine}-${c.line}` : `${c.path}:${c.line}`
+      const where = document.createElement('span')
+      where.className = 'rc-where'
+      where.textContent = anchor
+      where.title = anchor
+      const body = document.createElement('span')
+      body.className = 'rc-body'
+      body.textContent = c.body
+      body.title = c.body
+      const remove = document.createElement('button')
+      remove.type = 'button'
+      remove.className = 'rc-remove'
+      remove.dataset.i = String(i)
+      remove.title = 'Remove from review'
+      remove.innerHTML = icon('x', 12)
+      li.append(where, body, remove)
+      this.reviewListEl.appendChild(li)
+    })
   }
 
   /** Clear the thread back to the empty placeholder. */

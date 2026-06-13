@@ -6,7 +6,7 @@
 // Stored under `thread:<repo>#<pr>`. A small LRU index (`thread:index`) caps how many PRs we
 // keep so storage can't grow without bound; the oldest threads are evicted past MAX_THREADS.
 
-import type { ChatMessage } from './types'
+import type { ChatMessage, DraftComment } from './types'
 
 /** One finalized turn, with the dock's display label for user turns (e.g. "Review · Security"). */
 export type StoredTurn = ChatMessage & { display?: string }
@@ -17,6 +17,8 @@ export interface ThreadState {
   turns: StoredTurn[]
   /** Unsent composer text. */
   draft: string
+  /** Pending comments accumulated into a draft review (submitted as one via the Reviews API). */
+  review: DraftComment[]
 }
 
 /** A stored thread plus the time it was last written (for LRU eviction). */
@@ -33,9 +35,11 @@ export function threadKey(repo: string, prNumber: number): string {
   return `${PREFIX}${repo}#${prNumber}`
 }
 
-/** True if there's nothing worth persisting (no turns and a blank draft). */
+/** True if there's nothing worth persisting (no turns, blank draft, no pending review). */
 function isEmpty(state: ThreadState): boolean {
-  return state.turns.length === 0 && state.draft.trim().length === 0
+  return (
+    state.turns.length === 0 && state.draft.trim().length === 0 && state.review.length === 0
+  )
 }
 
 /** Restore a PR's saved thread, or null if none. */
@@ -60,7 +64,12 @@ export async function saveThread(
     return
   }
   const key = threadKey(repo, prNumber)
-  const record: PersistedThread = { turns: state.turns, draft: state.draft, savedAt: Date.now() }
+  const record: PersistedThread = {
+    turns: state.turns,
+    draft: state.draft,
+    review: state.review,
+    savedAt: Date.now(),
+  }
   await chrome.storage.local.set({ [key]: record })
 
   // Move this key to the front of the LRU index; evict the tail.

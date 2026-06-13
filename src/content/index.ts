@@ -13,7 +13,7 @@ import {
   type OpenHelpMessage,
   type DeleteCommentMessage,
 } from '../shared/messages'
-import type { AskRequest } from '../shared/types'
+import type { AskRequest, DraftComment } from '../shared/types'
 import {
   captureSelection,
   reviewTarget,
@@ -360,6 +360,29 @@ async function undoPost(dock: DockPanel, pr: Pr, commentId: number, text: string
   }
 }
 
+/** Add the composer text to the pending review, anchored to the current selection. Purely
+ *  local — nothing is written until the review is submitted. */
+function addToReview(dock: DockPanel, text: string): void {
+  const pr = parsePr()
+  if (!pr) {
+    dock.flashTray('Open a pull request first.', false)
+    return
+  }
+  const target = lastSelection ? reviewTarget(lastSelection) : null
+  if (!target) {
+    dock.flashTray('Select a diff line first.', false)
+    return
+  }
+  dock.addReviewComment({
+    path: target.path,
+    line: target.line,
+    side: target.side,
+    startLine: target.startLine,
+    startSide: target.startSide,
+    body: text,
+  } satisfies DraftComment)
+}
+
 /** Create the dock and wire its (PR-agnostic) callbacks. Per-PR state — the persisted
  *  thread — is bound separately in `syncToPr`. */
 function buildDock(): DockPanel {
@@ -378,7 +401,8 @@ function buildDock(): DockPanel {
     const applied = prependComment(conventionalPrefix(label.value, decoration))
     dock.flashTray(applied ? 'Label added' : 'Focus a GitHub comment box first', applied)
   }
-  dock.onPost = (text) => void postComment(dock, text)
+  dock.onPost = (text) => postComment(dock, text)
+  dock.onAddToReview = (text) => addToReview(dock, text)
   dock.renderComments(CANNED_COMMENTS)
   dock.renderLabels(CC_LABELS, CC_DECORATIONS)
   dock.renderLenses(REVIEW_LENSES)
