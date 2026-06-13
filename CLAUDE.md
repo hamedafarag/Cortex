@@ -28,7 +28,7 @@ a native-messaging host). No third-party SaaS. GitHub-only.
   network.
   - `providers/` — `LlmProvider` interface + `registry.ts` (pick from settings, fall back).
     `anthropic.ts` (SDK streaming), `claudeCode.ts` (`connectNative` client).
-  - `github/api.ts` — PAT-authed REST: head sha, PR title/body, files/patch (diff grounding), budgeted whole-PR patches (summary/review), a pure path-based **test-gap** heuristic, post comment (single- or multi-line), delete comment (the Undo window).
+  - `github/api.ts` — PAT-authed REST: head sha, PR title/body, files/patch (diff grounding), budgeted whole-PR patches (summary/review), a pure path-based **test-gap** heuristic, post comment (single- or multi-line), delete comment (the Undo window), submit review (batch comments + verdict via the Reviews API).
 - `src/content/` — injected on github.com. `index.ts` mounts the dock, **tracks the last
   diff selection**, bridges ask/post. `dock/dock-panel.ts` = the UI, `dock/icons.ts` =
   inline SVGs. `selection.ts` = DOM → `{file, line, side, code}` + `reviewTarget` (post anchor,

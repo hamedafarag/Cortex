@@ -243,9 +243,11 @@ truth.**
   (threaded follow-ups via `history` + a **New thread** reset) with answer→comment actions
   (**Use as comment** / Copy); an **Insert** tray (canned snippets) and a **Label** tray
   (Conventional Comments); a **Whole PR** toolbar (no selection needed) with **Summarize** /
-  **Review** (+ a specialist-**lens** select) / **Test gaps**; and a composer with **Suggest a
-  fix** / **Ask** / **Post to line**. The header carries a **New thread** reset and a **?**
-  button that opens the built-in **features page** in a new tab.
+  **Review** (+ a specialist-**lens** select) / **Test gaps**; a composer with **Suggest a fix** /
+  **Ask** / **Add to review** / **Post to line**; and a **Pending review** panel that accumulates
+  comments and **Submits** them as one review with a **Comment / Approve / Request changes** verdict
+  (GitHub Reviews API). The header carries a **New thread** reset and a **?** button that opens the
+  built-in **features page** in a new tab.
 - The **features page** (`src/help/help.html`) is an extension-served page (a CRXJS build input,
   like the options page) opened via the background's `chrome.tabs.create` — a screenshot tour of
   every capability, adaptive light/dark, fully offline.

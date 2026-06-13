@@ -54,6 +54,8 @@ third-party server.
 - **Post line-anchored review comments** (single- or multi-line) straight to the PR via your
   own GitHub token — gated by a **confirm step** (shows the exact `repo · path:line`) and a
   **10-second Undo** afterwards, so a misfire is one click to retract.
+- **Batch reviews** — or accumulate comments into a **pending review** (kept per PR) and submit
+  them together with a **Comment / Approve / Request changes** verdict, like GitHub's own review flow.
 - **Native, adaptive UI** — the dock inherits GitHub's light/dark theme so it feels
   built-in; sharp Cortex identity, line icons, loading states, and **color-blind-safe**
   status (icon + label, never colour alone).

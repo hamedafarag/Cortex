@@ -330,3 +330,32 @@ export async function createReviewComment(
 export async function deleteReviewComment(repo: string, commentId: number): Promise<void> {
   await githubFetch(`/repos/${repo}/pulls/comments/${commentId}`, { method: 'DELETE' })
 }
+
+/** One line comment in a submitted review (Reviews API `comments[]` shape). */
+export interface ReviewCommentInput {
+  path: string
+  body: string
+  line: number
+  side: 'LEFT' | 'RIGHT'
+  /** `JSON.stringify` drops these when undefined (single-line anchors). */
+  start_line?: number
+  start_side?: 'LEFT' | 'RIGHT'
+}
+
+/** Submit a review (a batch of line comments + a verdict) in one call. `body` is required by
+ *  GitHub for COMMENT / REQUEST_CHANGES; APPROVE may have an empty body. */
+export async function createReview(
+  repo: string,
+  prNumber: number,
+  params: {
+    commit_id: string
+    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
+    body: string
+    comments: ReviewCommentInput[]
+  },
+): Promise<CreatedComment> {
+  return (await githubFetch(`/repos/${repo}/pulls/${prNumber}/reviews`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  })) as CreatedComment
+}

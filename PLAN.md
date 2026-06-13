@@ -184,10 +184,13 @@ Still reviewer-driven, on demand, never autonomous.
   the measured gap) + 9 dock-notice assertions + screenshot.*
 
 ### Deferred / out of scope (decided, not forgotten)
-- [ ] **Batch / pending review + review verdict** (Approve / Request changes) — requires
-  migrating from standalone comments to the Reviews API (`POST /pulls/{n}/reviews` with a
-  `comments[]` array + submit `event`). Real value for high-volume reviewers but the heaviest
-  item here — defer until 3a/3b are solid, and gate the verdict behind explicit user action.
+- [x] **Batch / pending review + review verdict** (Comment / Approve / Request changes) — *graduated
+  from deferred once 3a–3c were solid.* **Add to review** accumulates comments into a local
+  `DraftComment[]` (a "Pending review · N" panel, persisted per PR), then **Submit review** sends one
+  `POST /pulls/{n}/reviews` (`comments[]` + `event`), gated by a confirm; GitHub requires an overall
+  `body` for Comment/Request-changes (validated client-side). Single **Post to line** is kept alongside
+  (GitHub-style both). *Verified: 18 + 14 dock + 3 persistence + 7 Node API assertions; live in Edge
+  (submitted + cleaned up a real review on a draft PR).*
 - ~~Mark-as-viewed / file-progress tracking~~ — **skip:** GitHub ships per-file "Viewed" with
   a progress bar natively; reimplementing it fights GitHub's DOM for low marginal value.
 - ~~Autonomous auto-review (bot mode)~~ — **skip:** against Cortex's human-in-the-loop identity.

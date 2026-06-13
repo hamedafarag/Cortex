@@ -33,6 +33,22 @@ export interface ChatMessage {
   content: string
 }
 
+/** The verdict submitted with a review (GitHub Reviews API `event`). */
+export type ReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES'
+
+/** One pending comment in a draft review — anchored exactly like a posted review comment, so
+ *  it can ride the GitHub Reviews API `comments[]` array when the review is submitted. */
+export interface DraftComment {
+  path: string
+  /** Last line of the comment, on `side` of the diff. */
+  line: number
+  side: 'LEFT' | 'RIGHT'
+  /** First line of a multi-line anchor (spans `startLine`..`line`); omitted for single-line. */
+  startLine?: number
+  startSide?: 'LEFT' | 'RIGHT'
+  body: string
+}
+
 /** A single "ask about this code" request from the dock. */
 export interface AskRequest {
   question: string

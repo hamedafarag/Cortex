@@ -4,7 +4,7 @@
 //
 // Keeping both protocols here gives one source of truth for message shapes.
 
-import type { AskRequest } from './types'
+import type { AskRequest, DraftComment, ReviewEvent } from './types'
 
 // ---------------------------------------------------------------------------
 // 1. Content script <-> background worker (port)
@@ -144,6 +144,17 @@ export interface DeleteCommentMessage {
   commentId: number
 }
 
+/** content -> background: submit a batch review (the dock's pending comments) with a verdict. */
+export interface SubmitReviewMessage {
+  type: 'GH_SUBMIT_REVIEW'
+  repo: string
+  prNumber: number
+  event: ReviewEvent
+  /** Overall review body. Required by GitHub for COMMENT / REQUEST_CHANGES. */
+  body: string
+  comments: DraftComment[]
+}
+
 /** content -> background: open the bundled features/help page in a new tab. The background
  *  owns `chrome.tabs`, which content scripts can't call. */
 export interface OpenHelpMessage {
@@ -153,6 +164,7 @@ export interface OpenHelpMessage {
 export type GithubRequest =
   | PostCommentMessage
   | DeleteCommentMessage
+  | SubmitReviewMessage
   | TestGapsMessage
   | OpenHelpMessage
 

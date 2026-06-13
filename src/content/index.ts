@@ -12,8 +12,9 @@ import {
   type TestGapsResult,
   type OpenHelpMessage,
   type DeleteCommentMessage,
+  type SubmitReviewMessage,
 } from '../shared/messages'
-import type { AskRequest } from '../shared/types'
+import type { AskRequest, DraftComment, ReviewEvent } from '../shared/types'
 import {
   captureSelection,
   reviewTarget,
@@ -360,6 +361,85 @@ async function undoPost(dock: DockPanel, pr: Pr, commentId: number, text: string
   }
 }
 
+/** Add the composer text to the pending review, anchored to the current selection. Purely
+ *  local — nothing is written until the review is submitted. */
+function addToReview(dock: DockPanel, text: string): void {
+  const pr = parsePr()
+  if (!pr) {
+    dock.flashTray('Open a pull request first.', false)
+    return
+  }
+  const target = lastSelection ? reviewTarget(lastSelection) : null
+  if (!target) {
+    dock.flashTray('Select a diff line first.', false)
+    return
+  }
+  dock.addReviewComment({
+    path: target.path,
+    line: target.line,
+    side: target.side,
+    startLine: target.startLine,
+    startSide: target.startSide,
+    body: text,
+  } satisfies DraftComment)
+}
+
+const VERDICT_LABEL: Record<ReviewEvent, string> = {
+  COMMENT: 'Comment',
+  APPROVE: 'Approve',
+  REQUEST_CHANGES: 'Request changes',
+}
+
+/** Submit the pending review with a verdict. GitHub requires an overall body for COMMENT /
+ *  REQUEST_CHANGES. Gated by a confirm, like posting a single comment. */
+function submitReview(dock: DockPanel, event: ReviewEvent, body: string): void {
+  const pr = parsePr()
+  if (!pr) {
+    dock.reviewFailed('Open a pull request first.')
+    return
+  }
+  const comments = dock.getReview()
+  if (comments.length === 0) {
+    dock.reviewFailed('Add at least one comment to the review first.')
+    return
+  }
+  if ((event === 'COMMENT' || event === 'REQUEST_CHANGES') && !body) {
+    dock.reviewFailed(`A ${VERDICT_LABEL[event]} review needs an overall summary — add one above.`)
+    return
+  }
+  const n = comments.length
+  const summary = `Submit ${n} comment${n === 1 ? '' : 's'} as ${VERDICT_LABEL[event]} on ${pr.repo}?`
+  dock.confirmReview(summary, () => void doSubmitReview(dock, pr, event, body, comments))
+}
+
+/** The confirmed review submission — the one public write for the batch. */
+async function doSubmitReview(
+  dock: DockPanel,
+  pr: Pr,
+  event: ReviewEvent,
+  body: string,
+  comments: DraftComment[],
+): Promise<void> {
+  dock.reviewSubmitting()
+  try {
+    const result = (await chrome.runtime.sendMessage({
+      type: 'GH_SUBMIT_REVIEW',
+      repo: pr.repo,
+      prNumber: pr.prNumber,
+      event,
+      body,
+      comments,
+    } satisfies SubmitReviewMessage)) as GithubResult
+    if (result?.ok && result.url) {
+      dock.reviewSubmitted(result.url, () => location.reload())
+    } else {
+      dock.reviewFailed(result?.error ?? 'Submit failed.')
+    }
+  } catch (err) {
+    dock.reviewFailed(err instanceof Error ? err.message : String(err))
+  }
+}
+
 /** Create the dock and wire its (PR-agnostic) callbacks. Per-PR state — the persisted
  *  thread — is bound separately in `syncToPr`. */
 function buildDock(): DockPanel {
@@ -378,7 +458,9 @@ function buildDock(): DockPanel {
     const applied = prependComment(conventionalPrefix(label.value, decoration))
     dock.flashTray(applied ? 'Label added' : 'Focus a GitHub comment box first', applied)
   }
-  dock.onPost = (text) => void postComment(dock, text)
+  dock.onPost = (text) => postComment(dock, text)
+  dock.onAddToReview = (text) => addToReview(dock, text)
+  dock.onSubmitReview = (event, body) => submitReview(dock, event, body)
   dock.renderComments(CANNED_COMMENTS)
   dock.renderLabels(CC_LABELS, CC_DECORATIONS)
   dock.renderLenses(REVIEW_LENSES)
