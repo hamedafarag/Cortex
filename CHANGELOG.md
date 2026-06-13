@@ -62,6 +62,10 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   `secret = "…"` assignments, and high-entropy tokens) are **masked before the request leaves the
   browser**, across the selection, the diff hunk, and whole-PR patches. The dock shows a notice
   when something was masked. Reinforces "your key, no third-party SaaS." (Phase 3c)
+- **Batch review + verdict** — beyond single comments, you can now **Add to review** to build up a
+  **pending review** (a panel of line comments, persisted per PR) and **Submit** it as one review
+  with a **Comment / Approve / Request changes** verdict (GitHub Reviews API), gated by a confirm.
+  Single **Post to line** stays for one-off comments.
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated

@@ -21,6 +21,7 @@ import {
   getPullHeadSha,
   createReviewComment,
   deleteReviewComment,
+  createReview,
   getDiffHunk,
   getPullMeta,
   getPrPatches,
@@ -198,6 +199,34 @@ chrome.runtime.onMessage.addListener((message: GithubRequest, _sender, sendRespo
       try {
         await deleteReviewComment(message.repo, message.commentId)
         sendResponse({ ok: true } satisfies GithubResult)
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        } satisfies GithubResult)
+      }
+    })()
+    return true // keep the channel open for the async sendResponse
+  }
+
+  if (message?.type === 'GH_SUBMIT_REVIEW') {
+    void (async () => {
+      try {
+        const commitId = await getPullHeadSha(message.repo, message.prNumber)
+        const review = await createReview(message.repo, message.prNumber, {
+          commit_id: commitId,
+          event: message.event,
+          body: message.body,
+          comments: message.comments.map((c) => ({
+            path: c.path,
+            body: c.body,
+            line: c.line,
+            side: c.side,
+            start_line: c.startLine,
+            start_side: c.startSide,
+          })),
+        })
+        sendResponse({ ok: true, url: review.html_url } satisfies GithubResult)
       } catch (err) {
         sendResponse({
           ok: false,

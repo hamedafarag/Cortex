@@ -33,6 +33,9 @@ export interface ChatMessage {
   content: string
 }
 
+/** The verdict submitted with a review (GitHub Reviews API `event`). */
+export type ReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES'
+
 /** One pending comment in a draft review — anchored exactly like a posted review comment, so
  *  it can ride the GitHub Reviews API `comments[]` array when the review is submitted. */
 export interface DraftComment {
