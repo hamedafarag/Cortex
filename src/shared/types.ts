@@ -21,6 +21,8 @@ export interface AskContext {
   selectedCode?: string
   /** Surrounding diff hunk, for grounding the model. */
   diffHunk?: string
+  /** All changed-file diffs (budgeted), for whole-PR tasks like the summary. */
+  prPatches?: string
   /** Best-effort language hint derived from the file extension. */
   language?: string
 }
@@ -37,6 +39,9 @@ export interface AskRequest {
   context: AskContext
   /** Prior turns, oldest first, for multi-turn follow-ups. */
   history?: ChatMessage[]
+  /** Whole-PR modes make the background fetch all file patches first: 'summary' asks for an
+   *  overview, 'review' asks for a findings list. 'ask' (default) is selection-scoped. */
+  mode?: 'ask' | 'summary' | 'review'
 }
 
 /** A streamed unit of a provider's response. */

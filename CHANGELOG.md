@@ -28,6 +28,27 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   receives the prior turns (`AskRequest.history`, wired through both the API provider and the
   CLI host). The answer area shows the thread (questions + answers); a **New thread** button
   resets it. (Phase 3a)
+- **AI PR summary** — a **Summarize PR** button (no selection needed) fetches all changed-file
+  diffs (budgeted) and streams a structured summary — TL;DR, key changes, a per-file gloss, and
+  a **1–5 review-effort** rating — into the dock as a thread turn, so you can ask follow-ups.
+  (Phase 3b)
+- **Whole-PR review** — a **Review** button (no selection needed) reuses the summary's patch
+  pipeline (`mode: 'review'`) and streams a **findings list** into the dock as a thread turn.
+  Each finding rides the answer→comment bridge, so it's promotable to a real review comment.
+  (Phase 3b)
+- **Severity tags** — each review finding leads with **Blocker / Major / Minor / Nit / Praise**,
+  rendered as a **color-blind-safe chip** (icon **+** label, Primer-tinted) so you can triage
+  blocker-vs-nit at a glance. The decoration no-ops on plain answers and summaries. (Phase 3b)
+- **Specialist review lenses** — a **lens** select beside *Review* (Security · Performance ·
+  Error handling · Readability, plus General) scopes a whole-PR review to one dimension for that
+  one turn. (Phase 3b)
+- **Test-gap check** — a **Test gaps** button runs a deterministic, **no-LLM** path heuristic
+  over the changed-file list and reports which changed source files have **no matching test
+  change** (matched by file name). An approximation, not coverage — and it says so. (Phase 3b)
+- **In-app features page** — a **?** button in the dock header opens a built-in **features
+  page** (in a new tab) showcasing every capability with screenshots. It's a real
+  extension-served page (`src/help/help.html` → `chrome-extension://…`, adaptive light/dark),
+  opened via the background (`chrome.tabs.create`) — no internet, no third party. (Phase 3b)
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated

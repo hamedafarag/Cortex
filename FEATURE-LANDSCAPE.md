@@ -32,8 +32,9 @@ facts drive every recommendation below:
 
 The highest-leverage moves cluster around **"apply fixes"** and **"orient"**: an
 answer→comment bridge and committable `suggestion` blocks (both ride existing post code with
-zero new API), PR-context injection (~20 lines over an API call already made), and the planned
-PR summary / severity tags / threaded follow-ups (all buildable on existing primitives).
+zero new API), PR-context injection (~20 lines over an API call already made), and the
+now-shipped PR summary / whole-PR review / severity tags / specialist lenses / test-gap /
+threaded follow-ups (all built on existing primitives).
 
 ## Top picks — impact-per-effort, ordered
 
@@ -73,9 +74,9 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
-| AI PR summary / TL;DR (whole-PR walkthrough) | CodeRabbit, Copilot, Qodo `/describe`, Graphite, What The Diff | 🟡 | M / High |
+| AI PR summary / TL;DR (whole-PR walkthrough) | CodeRabbit, Copilot, Qodo `/describe`, Graphite, What The Diff | ✅ | M / High |
 | Per-file changes table (blast-radius map) | CodeRabbit, Qodo `/describe` | ⬜ | M / M |
-| Estimated review-effort score (1–5) | CodeRabbit, Qodo | ⬜ | L / M |
+| Estimated review-effort score (1–5) | CodeRabbit, Qodo | ✅ | L / M |
 | PR title/body/commit context injection | CodeRabbit, Qodo, Greptile, Korbit | ✅ | L / High |
 
 - **AI PR summary** — "Summarize PR" button: fetch all file patches (`listPullFiles`),
@@ -94,10 +95,10 @@ PR summary / severity tags / threaded follow-ups (all buildable on existing prim
 
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
-| Whole-file review (issues across a file, not just selection) | CodeRabbit, Greptile, Sourcery, Qodo | 🟡 | M / High |
-| Severity / priority tags on findings | CodeRabbit, Greptile, Korbit, Qodo, Sourcery | 🟡 | L / M |
-| Specialist-angle review (security / perf / error-handling) | Sourcery, Bito, Qodo, Ellipsis | ⬜ | L / M |
-| Test-gap call-out ("this changed code lacks tests") | Qodo, Coveralls, CodeRabbit | ⬜ | M / M |
+| Whole-file / whole-PR review (issues across files, not just selection) | CodeRabbit, Greptile, Sourcery, Qodo | ✅ | M / High |
+| Severity / priority tags on findings | CodeRabbit, Greptile, Korbit, Qodo, Sourcery | ✅ | L / M |
+| Specialist-angle review (security / perf / error-handling) | Sourcery, Bito, Qodo, Ellipsis | ✅ | L / M |
+| Test-gap call-out ("this changed code lacks tests") | Qodo, Coveralls, CodeRabbit | ✅ | M / M |
 
 - **Whole-file review** — feed the whole file's patch (not one hunk) and return a findings
   list; the UX win is rendering each finding so it's promotable to a comment in one click
@@ -224,7 +225,11 @@ committable `suggestion` blocks via **Suggest a fix**; Conventional Comments lab
 picker; threaded follow-ups (conversation `history` + **New thread**); dock collapses to a
 launcher button → full-width panel.
 
-**Planned (Phase 3):** whole-file/PR review; severity tags; persist per PR. *(Later:
+**Phase 3b:** AI PR summary (TL;DR · key changes · per-file gloss · review-effort 1–5);
+whole-PR **review** (severity-tagged findings list); **specialist lenses** (security / perf /
+errors / readability); deterministic **test-gap** check.
+
+**Planned (Phase 3c):** persist per PR; confirm/undo before posting; secret redaction. *(Later:
 GitLab/Bitbucket, Web Store packaging, Windows native-host script.)*
 
 **Not present:** batch/pending review; review verdict; secret redaction; slash commands;

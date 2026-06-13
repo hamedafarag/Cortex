@@ -10,7 +10,22 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { CannedComment, ConventionalLabel } from '../comments'
 import type { ChatMessage } from '../../shared/types'
-import { icon } from './icons'
+import { icon, type IconName } from './icons'
+
+/** A review lens option rendered into the lens select. */
+export interface LensOption {
+  id: string
+  label: string
+}
+
+/** Severity → chip icon + colour. Label is always shown too (color-blind safe). */
+const SEVERITY_CHIPS: Record<string, { icon: IconName; color: string }> = {
+  blocker: { icon: 'alert', color: 'var(--danger)' },
+  major: { icon: 'alert', color: 'var(--attention)' },
+  minor: { icon: 'info', color: 'var(--accent)' },
+  nit: { icon: 'dot', color: 'var(--fg-muted)' },
+  praise: { icon: 'sparkles', color: 'var(--success)' },
+}
 
 marked.setOptions({ gfm: true, breaks: true })
 
@@ -38,6 +53,7 @@ const STYLES = `
     --accent: var(--fgColor-accent, var(--color-accent-fg, #0969da));
     --success: var(--fgColor-success, var(--color-success-fg, #1a7f37));
     --danger: var(--fgColor-danger, var(--color-danger-fg, #d1242f));
+    --attention: var(--fgColor-attention, var(--color-attention-fg, #9a6700));
     --cortex: #6b5cf6;        /* Cortex brand accent — used sparingly */
     --cortex-on: #ffffff;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -139,6 +155,19 @@ const STYLES = `
   .answer a { color: var(--accent) }
   .answer blockquote { border-left: 3px solid var(--border); padding-left: 10px; color: var(--fg-muted) }
 
+  /* severity chips (whole-PR review findings) — colour + icon + label = color-blind safe */
+  .answer .sev {
+    display: inline-flex; align-items: center; gap: 4px; vertical-align: baseline;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase;
+    padding: 1px 7px 1px 6px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
+  .answer .sev .icon { flex: none }
+  /* findings list: tighter, with the chip aligned to the title */
+  .answer li:has(.sev) { margin-bottom: 5px }
+
   /* ── conversation turns ───────────────────────────────────────────── */
   .turn-q {
     font-weight: 600; color: var(--fg); white-space: pre-wrap; word-break: break-word;
@@ -184,6 +213,25 @@ const STYLES = `
     border-radius: 6px; padding: 2px 6px; cursor: pointer;
   }
 
+  /* ── whole-PR actions toolbar ─────────────────────────────────────── */
+  .pr-actions {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 14px; border-top: 1px solid var(--border);
+  }
+  .pr-label { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--fg-muted); font-weight: 600; }
+  .pr-actions .group { display: inline-flex; align-items: center; gap: 0; }
+  .pr-actions .group select.lens {
+    font: inherit; font-size: 11px; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--border); border-right: none;
+    border-radius: 7px 0 0 7px; padding: 4px 6px; cursor: pointer; max-width: 130px;
+  }
+  .pr-actions .group .btn.sm { border-radius: 0 7px 7px 0 }
+  .btn.sm {
+    padding: 4px 10px; font-size: 12px; font-weight: 600; border-radius: 7px;
+    gap: 5px; color: var(--fg);
+  }
+  .btn.sm:disabled { opacity: .55; cursor: default }
+
   /* ── composer ─────────────────────────────────────────────────────── */
   .composer { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 12px; border-top: 1px solid var(--border); }
   textarea {
@@ -227,6 +275,7 @@ function header(): string {
       <span class="spacer"></span>
       <span class="chip" hidden>${icon('code', 13)}<span class="label"></span></span>
       <button class="newthread" type="button" title="Clear the conversation and start a new thread" aria-label="New thread" hidden>New</button>
+      <button class="iconbtn help" type="button" title="What can Cortex do? — open the features page" aria-label="Features &amp; help">${icon('help', 16)}</button>
       <button class="iconbtn toggle" type="button" title="Collapse / expand" aria-label="Collapse">${icon('chevronDown', 16)}</button>
     </div>`
 }
@@ -252,6 +301,15 @@ const TEMPLATE = `
         <select class="decoration" title="Conventional Comments decoration"></select>
         <span class="label-chips"></span>
       </div>
+      <div class="pr-actions">
+        <span class="pr-label">${icon('list', 13)} Whole PR</span>
+        <button type="button" class="btn sm summarize" title="Summarize the whole PR (no selection needed)">${icon('list', 14)} Summarize</button>
+        <span class="group">
+          <select class="lens" title="Review lens — scope the review to one dimension"></select>
+          <button type="button" class="btn sm review" title="Review the whole PR and list findings (no selection needed)">${icon('search', 14)} Review</button>
+        </span>
+        <button type="button" class="btn sm testgaps" title="Heuristic check: which changed source files have no matching test change?">${icon('beaker', 14)} Test gaps</button>
+      </div>
       <div class="composer">
         <textarea placeholder="Ask about the code, or write a comment to post…" rows="1"></textarea>
         <div class="actions">
@@ -269,9 +327,13 @@ export class DockPanel {
   readonly host: HTMLElement
   onSubmit: ((question: string) => void) | null = null
   onSuggest: (() => void) | null = null
+  onSummarize: (() => void) | null = null
+  onReview: ((lensId: string) => void) | null = null
+  onTestGaps: (() => void) | null = null
   onInsertComment: ((body: string) => void) | null = null
   onApplyLabel: ((label: ConventionalLabel, decoration: string) => void) | null = null
   onPost: ((text: string) => void) | null = null
+  onHelp: (() => void) | null = null
 
   private readonly root: ShadowRoot
   private readonly answerEl: HTMLDivElement
@@ -281,6 +343,10 @@ export class DockPanel {
   private readonly inputEl: HTMLTextAreaElement
   private readonly askBtn: HTMLButtonElement
   private readonly suggestBtn: HTMLButtonElement
+  private readonly summarizeBtn: HTMLButtonElement
+  private readonly reviewBtn: HTMLButtonElement
+  private readonly testGapsBtn: HTMLButtonElement
+  private readonly lensSelect: HTMLSelectElement
   private readonly postBtn: HTMLButtonElement
   private readonly postStatusEl: HTMLSpanElement
   private readonly trayChipsEl: HTMLSpanElement
@@ -312,6 +378,10 @@ export class DockPanel {
     this.inputEl = this.root.querySelector('textarea')!
     this.askBtn = this.root.querySelector('.btn.ask')!
     this.suggestBtn = this.root.querySelector('.btn.suggest')!
+    this.summarizeBtn = this.root.querySelector('.btn.summarize')!
+    this.reviewBtn = this.root.querySelector('.btn.review')!
+    this.testGapsBtn = this.root.querySelector('.btn.testgaps')!
+    this.lensSelect = this.root.querySelector('select.lens')!
     this.postBtn = this.root.querySelector('.btn.post')!
     this.postStatusEl = this.root.querySelector('.post-status')!
     this.trayChipsEl = this.root.querySelector('.tray-chips')!
@@ -322,15 +392,25 @@ export class DockPanel {
 
     this.root.querySelector('.header')!.addEventListener('click', (e) => {
       const t = e.target as HTMLElement
-      // Chip text stays selectable; the New-thread button has its own handler.
-      if (t.closest('.chip') || t.closest('.newthread')) return
+      // Chip text stays selectable; the New-thread and Help buttons have their own handlers.
+      if (t.closest('.chip') || t.closest('.newthread') || t.closest('.help')) return
       this.toggleCollapsed()
     })
+    this.root.querySelector('.help')!.addEventListener('click', () => this.onHelp?.())
     this.root.querySelector('.launcher')!.addEventListener('click', () => this.toggleCollapsed())
     this.newThreadBtn.addEventListener('click', () => this.newThread())
     this.askBtn.addEventListener('click', () => this.submit())
     this.suggestBtn.addEventListener('click', () => {
       if (!this.streaming) this.onSuggest?.()
+    })
+    this.summarizeBtn.addEventListener('click', () => {
+      if (!this.streaming) this.onSummarize?.()
+    })
+    this.reviewBtn.addEventListener('click', () => {
+      if (!this.streaming) this.onReview?.(this.lensSelect.value)
+    })
+    this.testGapsBtn.addEventListener('click', () => {
+      if (!this.streaming) this.onTestGaps?.()
     })
     this.postBtn.addEventListener('click', () => {
       const text = this.inputEl.value.trim()
@@ -419,6 +499,17 @@ export class DockPanel {
     }
   }
 
+  /** Populate the review-lens select (General + specialist lenses). */
+  renderLenses(lenses: LensOption[]): void {
+    this.lensSelect.replaceChildren()
+    for (const lens of lenses) {
+      const opt = document.createElement('option')
+      opt.value = lens.id
+      opt.textContent = lens.id === 'general' ? 'General' : `${lens.label} lens`
+      this.lensSelect.appendChild(opt)
+    }
+  }
+
   flashTray(message: string, ok = true): void {
     this.trayStatusEl.innerHTML = `${icon(ok ? 'check' : 'alert', 12)}<span>${message}</span>`
     this.trayStatusEl.style.color = ok ? 'var(--success)' : 'var(--danger)'
@@ -428,6 +519,16 @@ export class DockPanel {
 
   private showAnswerActions(visible: boolean): void {
     this.answerActionsEl.hidden = !visible
+  }
+
+  /** Disable/enable every "start an ask" control while one is in flight. */
+  private setActionsDisabled(disabled: boolean): void {
+    this.askBtn.disabled = disabled
+    this.suggestBtn.disabled = disabled
+    this.summarizeBtn.disabled = disabled
+    this.reviewBtn.disabled = disabled
+    this.testGapsBtn.disabled = disabled
+    this.lensSelect.disabled = disabled
   }
 
   /** Load the streamed answer into the composer so the reviewer can edit, then Post. */
@@ -480,11 +581,41 @@ export class DockPanel {
       .join('')
   }
 
+  /** Write the answer area and upgrade any review-finding severity words to chips. The single
+   *  funnel for all renders, so severity chips survive re-renders (streaming, post, error). */
+  private setAnswerHtml(html: string): void {
+    this.answerEl.innerHTML = html
+    this.decorateSeverities()
+  }
+
+  /** Replace a leading **Blocker/Major/Minor/Nit/Praise** on a finding bullet with an
+   *  icon + label chip. No-ops on anything that isn't a recognised severity, so plain
+   *  answers and summaries are untouched. Runs on already-sanitized DOM (chips are built via
+   *  DOM APIs from our own static icons), so it adds nothing for DOMPurify to vet. */
+  private decorateSeverities(): void {
+    const strongs = this.answerEl.querySelectorAll<HTMLElement>('.turn-a strong')
+    strongs.forEach((el) => {
+      const parent = el.parentElement
+      if (!parent || el !== parent.firstElementChild) return
+      if (parent.tagName !== 'LI' && parent.tagName !== 'P') return
+      const word = (el.textContent ?? '').trim().toLowerCase().replace(/[.:]+$/, '')
+      const meta = SEVERITY_CHIPS[word]
+      if (!meta) return
+      const chip = document.createElement('span')
+      chip.className = 'sev'
+      chip.style.color = meta.color
+      chip.innerHTML = icon(meta.icon, 11)
+      const label = document.createElement('span')
+      label.textContent = word.charAt(0).toUpperCase() + word.slice(1)
+      chip.appendChild(label)
+      el.replaceWith(chip)
+    })
+  }
+
   // ── ask lifecycle ──────────────────────────────────────────────────
   startAnswer(question: string, display?: string): void {
     this.streaming = true
-    this.askBtn.disabled = true
-    this.suggestBtn.disabled = true
+    this.setActionsDisabled(true)
     this.host.removeAttribute('collapsed')
     this.rawAnswer = ''
     this.pendingQuestion = question
@@ -493,24 +624,25 @@ export class DockPanel {
     this.threadPrefix =
       this.finalizedHtml() + `<div class="turn-q">${escapeHtml(this.pendingDisplay)}</div>`
     this.answerEl.className = 'answer'
-    this.answerEl.innerHTML =
+    this.setAnswerHtml(
       this.threadPrefix +
-      `<div class="status-row spinner">${icon('spinner', 15)}<span>Thinking…</span></div>`
+        `<div class="status-row spinner">${icon('spinner', 15)}<span>Thinking…</span></div>`,
+    )
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   appendText(delta: string): void {
     this.rawAnswer += delta
-    this.answerEl.innerHTML =
+    this.setAnswerHtml(
       this.threadPrefix +
-      `<div class="turn-a">${DOMPurify.sanitize(marked.parse(this.rawAnswer) as string)}</div>`
+        `<div class="turn-a">${DOMPurify.sanitize(marked.parse(this.rawAnswer) as string)}</div>`,
+    )
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
   finishAnswer(): void {
     this.streaming = false
-    this.askBtn.disabled = false
-    this.suggestBtn.disabled = false
+    this.setActionsDisabled(false)
     if (this.rawAnswer.trim() && this.pendingQuestion != null) {
       // Commit the exchange; keep rawAnswer so "Use as comment" can act on the latest answer.
       this.turns.push({ role: 'user', content: this.pendingQuestion, display: this.pendingDisplay })
@@ -518,27 +650,28 @@ export class DockPanel {
       this.pendingQuestion = null
       this.newThreadBtn.hidden = false
       this.answerEl.className = 'answer'
-      this.answerEl.innerHTML = this.finalizedHtml()
+      this.setAnswerHtml(this.finalizedHtml())
       this.answerEl.scrollTop = this.answerEl.scrollHeight
       this.showAnswerActions(true)
     } else {
       this.pendingQuestion = null
-      this.answerEl.innerHTML =
-        this.threadPrefix + `<div class="status-row"><span>(no response)</span></div>`
+      this.setAnswerHtml(
+        this.threadPrefix + `<div class="status-row"><span>(no response)</span></div>`,
+      )
     }
   }
 
   showError(message: string): void {
     this.streaming = false
-    this.askBtn.disabled = false
-    this.suggestBtn.disabled = false
+    this.setActionsDisabled(false)
     this.host.removeAttribute('collapsed')
     this.showAnswerActions(false)
     this.pendingQuestion = null
     this.answerEl.className = 'answer'
-    this.answerEl.innerHTML =
+    this.setAnswerHtml(
       this.finalizedHtml() +
-      `<div class="status-row error">${icon('alert', 16)}<span class="msg"></span></div>`
+        `<div class="status-row error">${icon('alert', 16)}<span class="msg"></span></div>`,
+    )
     this.answerEl.querySelector('.status-row.error .msg')!.textContent = message
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
@@ -558,10 +691,11 @@ export class DockPanel {
     this.host.removeAttribute('collapsed')
     this.showAnswerActions(false)
     this.answerEl.className = 'answer'
-    this.answerEl.innerHTML =
+    this.setAnswerHtml(
       this.finalizedHtml() +
-      `<div class="status-row ok">${icon('check', 16)}<span>Comment posted — </span>` +
-      `<a target="_blank" rel="noopener noreferrer">view on GitHub ${icon('externalLink', 12)}</a></div>`
+        `<div class="status-row ok">${icon('check', 16)}<span>Comment posted — </span>` +
+        `<a target="_blank" rel="noopener noreferrer">view on GitHub ${icon('externalLink', 12)}</a></div>`,
+    )
     this.answerEl.querySelector('.status-row.ok a')!.setAttribute('href', url)
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }

@@ -17,7 +17,10 @@ pinned to the bottom of the page. From the dock the reviewer can:
   streamed answer in the dock (the "AI Assistant").
 - **Insert out-of-the-box comments** — canned review snippets dropped into GitHub's
   comment box.
-- More features later (whole-file/PR review, severity tags, threaded follow-ups).
+- **Review the whole PR** — one click (no selection) streams a findings list with
+  **severity tags** and optional **specialist lenses**, a **PR summary**, or a fast
+  **test-gap** check; ask **threaded follow-ups** in one conversation.
+- More to come (persist per PR, confirm/undo before posting, secret redaction).
 
 The AI backend is **pluggable**: it can talk to the local **Claude Code CLI**
 (riding the user's subscription) *or* the **Anthropic API** (user's own key). Both ship
@@ -238,7 +241,13 @@ truth.**
 - Sections: an answer area that renders the streamed-markdown **conversation thread**
   (threaded follow-ups via `history` + a **New thread** reset) with answer→comment actions
   (**Use as comment** / Copy); an **Insert** tray (canned snippets) and a **Label** tray
-  (Conventional Comments); and a composer with **Ask** / **Suggest a fix** / **Post to line**.
+  (Conventional Comments); a **Whole PR** toolbar (no selection needed) with **Summarize** /
+  **Review** (+ a specialist-**lens** select) / **Test gaps**; and a composer with **Suggest a
+  fix** / **Ask** / **Post to line**. The header carries a **New thread** reset and a **?**
+  button that opens the built-in **features page** in a new tab.
+- The **features page** (`src/help/help.html`) is an extension-served page (a CRXJS build input,
+  like the options page) opened via the background's `chrome.tabs.create` — a screenshot tour of
+  every capability, adaptive light/dark, fully offline.
 - No framework — vanilla DOM + Web Components, per decision.
 
 ### Port protocol (content ↔ background)
