@@ -48,7 +48,16 @@ export interface ErrorMessage {
   message: string
 }
 
-export type BackgroundToContent = ChunkMessage | DoneMessage | ErrorMessage
+/** background -> content: out-of-band notice that some secrets were masked before the request
+ *  was sent to the model. Emitted (if any) before the first CHUNK. */
+export interface MetaMessage {
+  type: 'META'
+  id: string
+  /** How many secrets were masked across the request's code fields. */
+  redactedSecrets: number
+}
+
+export type BackgroundToContent = ChunkMessage | DoneMessage | ErrorMessage | MetaMessage
 
 // ---------------------------------------------------------------------------
 // 2. Background worker <-> native host (native messaging)

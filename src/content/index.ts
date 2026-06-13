@@ -65,6 +65,9 @@ function ask(request: AskRequest, dock: DockPanel, display?: string): void {
   port.onMessage.addListener((msg: BackgroundToContent) => {
     if (msg.id !== id) return
     switch (msg.type) {
+      case 'META':
+        dock.showRedactionNotice(msg.redactedSecrets)
+        break
       case 'CHUNK':
         dock.appendText(msg.delta)
         break

@@ -184,6 +184,16 @@ const STYLES = `
   /* ── answer actions ───────────────────────────────────────────────── */
   .answer-actions { display: flex; gap: 6px; padding: 0 14px 10px; }
   .answer-actions[hidden] { display: none }
+  .redaction-notice {
+    display: flex; align-items: center; gap: 7px; margin: 10px 14px 0;
+    padding: 7px 11px; font-size: 12px; border-radius: 8px;
+    color: var(--attention);
+    background: color-mix(in srgb, var(--attention) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--attention) 35%, transparent);
+  }
+  .redaction-notice[hidden] { display: none }
+  .redaction-notice .icon { flex: none }
+  .redaction-notice b { color: var(--fg) }
   .link-btn {
     display: inline-flex; align-items: center; gap: 5px;
     font: inherit; font-size: 11px; color: var(--fg-muted);
@@ -305,6 +315,7 @@ const TEMPLATE = `
   <div class="panel">
     ${header()}
     <div class="body">
+      <div class="redaction-notice" hidden></div>
       <div class="answer placeholder">Highlight code in the diff, then ask a question.</div>
       <div class="answer-actions" hidden>
         <button type="button" class="link-btn use-answer" title="Load this answer into the comment box to edit and post">${icon('comment', 13)} Use as comment</button>
@@ -359,6 +370,7 @@ export class DockPanel {
 
   private readonly root: ShadowRoot
   private readonly answerEl: HTMLDivElement
+  private readonly redactionEl: HTMLDivElement
   private readonly answerActionsEl: HTMLDivElement
   private readonly chipEl: HTMLSpanElement
   private readonly chipLabel: HTMLSpanElement
@@ -395,6 +407,7 @@ export class DockPanel {
 
     this.answerEl = this.root.querySelector('.answer')!
     this.answerActionsEl = this.root.querySelector('.answer-actions')!
+    this.redactionEl = this.root.querySelector('.redaction-notice')!
     this.chipEl = this.root.querySelector('.chip')!
     this.chipLabel = this.root.querySelector('.chip .label')!
     this.inputEl = this.root.querySelector('textarea')!
@@ -484,6 +497,16 @@ export class DockPanel {
     }
     this.chipLabel.textContent = summary
     this.chipEl.hidden = false
+  }
+
+  /** Tell the reviewer that secrets were masked before the request left the browser. Shown for
+   *  the current turn; cleared when the next ask starts. */
+  showRedactionNotice(count: number): void {
+    if (count <= 0) return
+    this.redactionEl.hidden = false
+    this.redactionEl.innerHTML =
+      `${icon('shield', 14)}<span>Masked <b>${count}</b> likely secret${count === 1 ? '' : 's'} ` +
+      `before sending to the model.</span>`
   }
 
   renderComments(comments: CannedComment[]): void {
@@ -610,6 +633,7 @@ export class DockPanel {
   /** Clear the thread back to the empty placeholder. */
   newThread(): void {
     this.turns = []
+    this.redactionEl.hidden = true
     this.pendingQuestion = null
     this.pendingDisplay = ''
     this.threadPrefix = ''
@@ -667,6 +691,7 @@ export class DockPanel {
   startAnswer(question: string, display?: string): void {
     this.streaming = true
     this.setActionsDisabled(true)
+    this.redactionEl.hidden = true // cleared per turn; META re-shows it if needed
     this.host.removeAttribute('collapsed')
     this.rawAnswer = ''
     this.pendingQuestion = question

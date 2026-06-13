@@ -13,6 +13,7 @@ import {
   type TestGapsResult,
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
+import { redactSecrets } from '../shared/redact'
 import { registry, NoProviderAvailableError } from './providers/registry'
 import { AnthropicProvider } from './providers/anthropic'
 import { ClaudeCodeProvider } from './providers/claudeCode'
@@ -104,6 +105,18 @@ chrome.runtime.onConnect.addListener((port) => {
         await Promise.all([enrichWithDiffHunk(request), enrichWithPrMeta(request)])
       }
       if (controller.signal.aborted) return
+      // Mask obvious secrets in every code-bearing field before the request leaves the browser.
+      let redactedSecrets = 0
+      for (const field of ['selectedCode', 'diffHunk', 'prPatches'] as const) {
+        const value = request.context[field]
+        if (!value) continue
+        const { text, count } = redactSecrets(value)
+        if (count) {
+          request.context[field] = text
+          redactedSecrets += count
+        }
+      }
+      if (redactedSecrets > 0) post({ type: 'META', id, redactedSecrets })
       const { provider } = await registry.resolve()
       for await (const chunk of provider.ask(request, controller.signal)) {
         if (controller.signal.aborted) break

@@ -175,9 +175,13 @@ Still reviewer-driven, on demand, never autonomous.
   **Refresh** action reloads to show the API-posted comment inline (GitHub's SPA won't render it
   otherwise); the composer clears on post and is restored on undo. *Verified: 16 + 13 dock UI + 5
   Node API assertions, typecheck + build; live confirm-gate in Edge, public write left to the user.*
-- [ ] **Secret redaction** — mask obvious secrets (key patterns / high-entropy strings) in the
-  selection before it leaves the browser; show a notice in the dock when something was
-  redacted. Strengthens the "your key, no third-party SaaS" trust story.
+- [x] **Secret redaction** — `shared/redact.ts` masks obvious secrets (provider key prefixes,
+  private-key blocks, JWTs, `secret = "…"` assignments, and conservative high-entropy tokens) in
+  **every code-bearing field** (`selectedCode` / `diffHunk` / `prPatches`) in the background just
+  before the provider call, so secrets never hit the network. A `META` port message surfaces a
+  color-blind-safe dock notice ("Masked N likely secrets…"). *Verified: 25 Node redaction
+  assertions (real key shapes redacted; SHAs/UUIDs/identifiers kept — entropy threshold 4.5 sits in
+  the measured gap) + 9 dock-notice assertions + screenshot.*
 
 ### Deferred / out of scope (decided, not forgotten)
 - [ ] **Batch / pending review + review verdict** (Approve / Request changes) — requires

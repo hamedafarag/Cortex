@@ -20,8 +20,8 @@ pinned to the bottom of the page. From the dock the reviewer can:
 - **Review the whole PR** — one click (no selection) streams a findings list with
   **severity tags** and optional **specialist lenses**, a **PR summary**, or a fast
   **test-gap** check; ask **threaded follow-ups** in one conversation.
-- Your conversation and drafts **persist per PR**, and posting is gated by a **confirm step +
-  a 10s Undo**. (More to come: secret redaction before code leaves the browser.)
+- Your conversation and drafts **persist per PR**; posting is gated by a **confirm step + a 10s
+  Undo**; and **obvious secrets are masked** before anything is sent to the model.
 
 The AI backend is **pluggable**: it can talk to the local **Claude Code CLI**
 (riding the user's subscription) *or* the **Anthropic API** (user's own key). Both ship

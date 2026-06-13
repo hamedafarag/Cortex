@@ -58,6 +58,10 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   deletes the comment. Belt-and-suspenders for the one irreversible action in the tool. A
   **Refresh** action shows the comment inline (GitHub's SPA won't render an API-posted comment on
   its own); the composer clears on a successful post and is restored if you Undo. (Phase 3c)
+- **Secret redaction** — obvious secrets (API-key prefixes, private-key blocks, JWTs,
+  `secret = "…"` assignments, and high-entropy tokens) are **masked before the request leaves the
+  browser**, across the selection, the diff hunk, and whole-PR patches. The dock shows a notice
+  when something was masked. Reinforces "your key, no third-party SaaS." (Phase 3c)
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated
