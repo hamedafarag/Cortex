@@ -61,6 +61,9 @@ third-party server.
 - **Built-in features page** — a **?** button in the dock header opens an in-app
   features tour (with screenshots) in a new tab — served by the extension itself, no internet
   needed.
+- **Persists per PR** — your conversation and the comment you're drafting are remembered for
+  each PR and restored when you come back (after a reload or navigating away), stored only in
+  your browser.
 
 ---
 

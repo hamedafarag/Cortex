@@ -49,6 +49,10 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   page** (in a new tab) showcasing every capability with screenshots. It's a real
   extension-served page (`src/help/help.html` → `chrome-extension://…`, adaptive light/dark),
   opened via the background (`chrome.tabs.create`) — no internet, no third party. (Phase 3b)
+- **Persistent threads per PR** — your conversation **and** the unsent composer draft now
+  autosave to `chrome.storage.local` keyed by `repo#prNumber` and **restore when you return to a
+  PR** (after a reload or in-page navigation). A 50-PR LRU cap keeps storage bounded. Also fixes a
+  bug where navigating between PRs carried one PR's conversation onto another. (Phase 3c)
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated

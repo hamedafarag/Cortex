@@ -10,6 +10,7 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { CannedComment, ConventionalLabel } from '../comments'
 import type { ChatMessage } from '../../shared/types'
+import type { ThreadState } from '../../shared/persistence'
 import { icon, type IconName } from './icons'
 
 /** A review lens option rendered into the lens select. */
@@ -334,6 +335,9 @@ export class DockPanel {
   onApplyLabel: ((label: ConventionalLabel, decoration: string) => void) | null = null
   onPost: ((text: string) => void) | null = null
   onHelp: (() => void) | null = null
+  /** Fired when the persistable thread changes. `immediate` = a committed change (finish/new
+   *  thread) that should be saved now; `false` = draft typing that can be debounced. */
+  onThreadChange: ((immediate: boolean) => void) | null = null
 
   private readonly root: ShadowRoot
   private readonly answerEl: HTMLDivElement
@@ -428,6 +432,8 @@ export class DockPanel {
         this.submit()
       }
     })
+    // Draft autosave — debounced by the persistence handler.
+    this.inputEl.addEventListener('input', () => this.onThreadChange?.(false))
 
     // Keep keystrokes inside the dock — GitHub's global hotkeys (s, /, t, f, …) fire
     // on document keydown because focus is in our shadow root (activeElement is the
@@ -539,6 +545,7 @@ export class DockPanel {
     this.inputEl.focus()
     this.inputEl.selectionStart = this.inputEl.selectionEnd = text.length
     this.inputEl.scrollIntoView({ block: 'nearest' })
+    this.onThreadChange?.(false) // persist the loaded draft
     this.flashTray('Loaded — edit, then Post to line')
   }
 
@@ -557,6 +564,31 @@ export class DockPanel {
     return this.turns.map((t) => ({ role: t.role, content: t.content }))
   }
 
+  /** The persistable state — finalized turns + the current composer draft. */
+  getThread(): ThreadState {
+    return {
+      turns: this.turns.map((t) => ({ role: t.role, content: t.content, display: t.display })),
+      draft: this.inputEl.value,
+    }
+  }
+
+  /** Restore a saved thread (turns + draft) on mount. Renders the conversation if any, and
+   *  re-arms "Use as comment" on the last answer. Does not fire onThreadChange (it's a load,
+   *  not a user edit) and does not expand the dock. */
+  restoreThread(state: ThreadState): void {
+    this.turns = state.turns.map((t) => ({ role: t.role, content: t.content, display: t.display }))
+    this.inputEl.value = state.draft ?? ''
+    if (this.turns.length === 0) return
+    this.newThreadBtn.hidden = false
+    this.answerEl.className = 'answer'
+    this.setAnswerHtml(this.finalizedHtml())
+    const lastAnswer = [...this.turns].reverse().find((t) => t.role === 'assistant')
+    if (lastAnswer) {
+      this.rawAnswer = lastAnswer.content // so Use-as-comment / Copy act on the restored answer
+      this.showAnswerActions(true)
+    }
+  }
+
   /** Clear the thread back to the empty placeholder. */
   newThread(): void {
     this.turns = []
@@ -568,6 +600,7 @@ export class DockPanel {
     this.newThreadBtn.hidden = true
     this.answerEl.className = 'answer placeholder'
     this.answerEl.textContent = 'Highlight code in the diff, then ask a question.'
+    this.onThreadChange?.(true)
   }
 
   /** Rendered HTML for the finalized turns — questions verbatim, answers as markdown. */
@@ -653,6 +686,7 @@ export class DockPanel {
       this.setAnswerHtml(this.finalizedHtml())
       this.answerEl.scrollTop = this.answerEl.scrollHeight
       this.showAnswerActions(true)
+      this.onThreadChange?.(true) // persist the committed turn
     } else {
       this.pendingQuestion = null
       this.setAnswerHtml(

@@ -14,6 +14,7 @@ import {
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
 import { captureSelection, reviewTarget, type SelectionContext } from './selection'
+import { loadThread, saveThread } from '../shared/persistence'
 import {
   CANNED_COMMENTS,
   CC_LABELS,
@@ -317,19 +318,16 @@ async function postComment(dock: DockPanel, text: string): Promise<void> {
   }
 }
 
-function mount(): void {
-  if (!parsePr()) return
-  if (document.querySelector(DOCK_SELECTOR)) return // already mounted
-
+/** Create the dock and wire its (PR-agnostic) callbacks. Per-PR state — the persisted
+ *  thread — is bound separately in `syncToPr`. */
+function buildDock(): DockPanel {
   const dock = new DockPanel()
-  currentDock = dock
   dock.onSubmit = (question) => onSubmit(dock, question)
   dock.onSuggest = () => onSuggest(dock)
   dock.onSummarize = () => onSummarize(dock)
   dock.onReview = (lensId) => onReview(dock, lensId)
   dock.onTestGaps = () => void onTestGaps(dock)
   dock.onHelp = () => void chrome.runtime.sendMessage({ type: 'OPEN_HELP' } satisfies OpenHelpMessage)
-  dock.renderLenses(REVIEW_LENSES)
   dock.onInsertComment = (body) => {
     const inserted = insertComment(body)
     dock.flashTray(inserted ? 'Inserted' : 'Focus a GitHub comment box first', inserted)
@@ -341,15 +339,74 @@ function mount(): void {
   dock.onPost = (text) => void postComment(dock, text)
   dock.renderComments(CANNED_COMMENTS)
   dock.renderLabels(CC_LABELS, CC_DECORATIONS)
-  dock.mount()
-  if (lastSelection) dock.setSelection(selectionLabel(lastSelection))
+  dock.renderLenses(REVIEW_LENSES)
+  return dock
 }
 
-function unmountIfNotPr(): void {
-  if (!parsePr()) {
+// ── Per-PR thread persistence ──────────────────────────────────────────
+type Pr = { repo: string; prNumber: number }
+let currentPr: Pr | null = null
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+let pendingSave: (() => void) | null = null
+
+const samePr = (a: Pr, b: Pr): boolean => a.repo === b.repo && a.prNumber === b.prNumber
+
+/** Run any debounced save now (before a navigation swaps the thread, or on page hide). */
+function flushSave(): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = undefined
+  const run = pendingSave
+  pendingSave = null
+  run?.()
+}
+
+/** Persist the dock's thread for `pr`. Committed changes (`immediate`) save now; draft typing
+ *  is debounced so we don't write storage on every keystroke. */
+function persistThread(dock: DockPanel, pr: Pr, immediate: boolean): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  const run = (): void => {
+    saveTimer = undefined
+    pendingSave = null
+    void saveThread(pr.repo, pr.prNumber, dock.getThread()).catch(() => {})
+  }
+  pendingSave = run
+  if (immediate) run()
+  else saveTimer = setTimeout(run, 500)
+}
+
+/** Mount/tear down the dock and swap the persisted thread as the URL changes — including SPA
+ *  navigation between PRs (where the same dock instance is reused). */
+function syncToPr(): void {
+  const pr = parsePr()
+  if (!pr) {
+    flushSave()
     document.querySelector(DOCK_SELECTOR)?.remove()
     currentDock = null
+    currentPr = null
+    return
   }
+  if (currentDock && currentPr && samePr(currentPr, pr)) return // same PR — nothing to swap
+
+  flushSave() // persist the outgoing PR before we rebind
+
+  const freshBuild = !currentDock
+  if (!currentDock) {
+    currentDock = buildDock()
+    currentDock.mount()
+    if (lastSelection) currentDock.setSelection(selectionLabel(lastSelection))
+  }
+  const dock = currentDock
+  currentPr = pr
+  dock.onThreadChange = (immediate) => persistThread(dock, pr, immediate)
+  void loadThread(pr.repo, pr.prNumber)
+    .then((saved) => {
+      if (!currentPr || !samePr(currentPr, pr)) return // navigated again before this resolved
+      if (saved) dock.restoreThread(saved)
+      else if (!freshBuild) dock.newThread() // clear a previous PR's thread (fresh dock is empty)
+    })
+    .catch(() => {
+      if (currentPr && samePr(currentPr, pr) && !freshBuild) dock.newThread()
+    })
 }
 
 // Track the last diff selection once, document-wide, and reflect it in the chip.
@@ -365,11 +422,11 @@ document.addEventListener('selectionchange', () => {
 // Remember which GitHub comment box was last focused (for canned-comment insert).
 trackCommentFields()
 
-// Mount now and on GitHub's client-side navigations (SPA — no full reload).
-mount()
+// Mount now and on GitHub's client-side navigations (SPA — no full reload). syncToPr swaps
+// the persisted thread when the PR changes.
+syncToPr()
 for (const evt of ['turbo:render', 'pjax:end', 'popstate']) {
-  window.addEventListener(evt, () => {
-    unmountIfNotPr()
-    mount()
-  })
+  window.addEventListener(evt, () => syncToPr())
 }
+// Flush a debounced draft save before the page goes away (full navigation / close).
+window.addEventListener('pagehide', () => flushSave())

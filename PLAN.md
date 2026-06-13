@@ -163,8 +163,11 @@ Still reviewer-driven, on demand, never autonomous.
   (`public/help/*.png`). *Verified: renders end-to-end with images served from `dist/`.*
 
 ### 3c. Persistence & trust
-- [ ] **Persist per PR** — store conversation turns + draft comments keyed by
-  `repo#prNumber` in `chrome.storage.local`; restore on mount.
+- [x] **Persist per PR** — conversation turns + the unsent composer draft autosave to
+  `chrome.storage.local` keyed by `repo#prNumber` (`shared/persistence.ts`, 50-PR LRU cap) and
+  restore on mount. `syncToPr()` swaps the thread as the PR changes (fixing a latent SPA-nav bug
+  where one PR's conversation carried onto another). *Verified: 12 Node + 16 dock assertions + live
+  in Edge (restore across a real reload, per-PR scoping, empty clears storage).*
 - [ ] **Confirm / undo before posting** — posting is a real public write (see Safety): add a
   confirm affordance, or a post-then-Undo window (`DELETE /pulls/comments/{id}`).
 - [ ] **Secret redaction** — mask obvious secrets (key patterns / high-entropy strings) in the
