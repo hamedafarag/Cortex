@@ -22,6 +22,9 @@ export type IconName =
   | 'info'
   | 'dot'
   | 'help'
+  | 'undo'
+  | 'refresh'
+  | 'shield'
 
 const PATHS: Record<IconName, string> = {
   // A small synapse / node cluster — the Cortex mark.
@@ -68,6 +71,12 @@ const PATHS: Record<IconName, string> = {
   dot: '<circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none"/>',
   // Question mark in a circle — "what can Cortex do?" help.
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2-2.4 3.3"/><path d="M12 17h.01"/>',
+  // Curved arrow back — "undo the post".
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/>',
+  // Circular arrows — "refresh the page to show the comment".
+  refresh: '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/>',
+  // Shield — "secrets masked before sending".
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
 }
 
 export function icon(name: IconName, size = 16): string {

@@ -163,13 +163,25 @@ Still reviewer-driven, on demand, never autonomous.
   (`public/help/*.png`). *Verified: renders end-to-end with images served from `dist/`.*
 
 ### 3c. Persistence & trust
-- [ ] **Persist per PR** — store conversation turns + draft comments keyed by
-  `repo#prNumber` in `chrome.storage.local`; restore on mount.
-- [ ] **Confirm / undo before posting** — posting is a real public write (see Safety): add a
-  confirm affordance, or a post-then-Undo window (`DELETE /pulls/comments/{id}`).
-- [ ] **Secret redaction** — mask obvious secrets (key patterns / high-entropy strings) in the
-  selection before it leaves the browser; show a notice in the dock when something was
-  redacted. Strengthens the "your key, no third-party SaaS" trust story.
+- [x] **Persist per PR** — conversation turns + the unsent composer draft autosave to
+  `chrome.storage.local` keyed by `repo#prNumber` (`shared/persistence.ts`, 50-PR LRU cap) and
+  restore on mount. `syncToPr()` swaps the thread as the PR changes (fixing a latent SPA-nav bug
+  where one PR's conversation carried onto another). *Verified: 12 Node + 16 dock assertions + live
+  in Edge (restore across a real reload, per-PR scoping, empty clears storage).*
+- [x] **Confirm / undo before posting** — *Post to line* now shows a **confirm bar** with the exact
+  target (`repo · path:line`, range-aware) before the write, **and** a **10s Undo** window after a
+  successful post (`deleteReviewComment` → `DELETE /pulls/comments/{id}`; `GH_POST_COMMENT` returns the
+  `commentId`, `githubFetch` tolerates the 204). Posting is now `confirm → doPost → undoPost`. A
+  **Refresh** action reloads to show the API-posted comment inline (GitHub's SPA won't render it
+  otherwise); the composer clears on post and is restored on undo. *Verified: 16 + 13 dock UI + 5
+  Node API assertions, typecheck + build; live confirm-gate in Edge, public write left to the user.*
+- [x] **Secret redaction** — `shared/redact.ts` masks obvious secrets (provider key prefixes,
+  private-key blocks, JWTs, `secret = "…"` assignments, and conservative high-entropy tokens) in
+  **every code-bearing field** (`selectedCode` / `diffHunk` / `prPatches`) in the background just
+  before the provider call, so secrets never hit the network. A `META` port message surfaces a
+  color-blind-safe dock notice ("Masked N likely secrets…"). *Verified: 25 Node redaction
+  assertions (real key shapes redacted; SHAs/UUIDs/identifiers kept — entropy threshold 4.5 sits in
+  the measured gap) + 9 dock-notice assertions + screenshot.*
 
 ### Deferred / out of scope (decided, not forgotten)
 - [ ] **Batch / pending review + review verdict** (Approve / Request changes) — requires

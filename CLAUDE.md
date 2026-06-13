@@ -28,7 +28,7 @@ a native-messaging host). No third-party SaaS. GitHub-only.
   network.
   - `providers/` — `LlmProvider` interface + `registry.ts` (pick from settings, fall back).
     `anthropic.ts` (SDK streaming), `claudeCode.ts` (`connectNative` client).
-  - `github/api.ts` — PAT-authed REST: head sha, PR title/body, files/patch (diff grounding), budgeted whole-PR patches (summary/review), a pure path-based **test-gap** heuristic, post comment (single- or multi-line).
+  - `github/api.ts` — PAT-authed REST: head sha, PR title/body, files/patch (diff grounding), budgeted whole-PR patches (summary/review), a pure path-based **test-gap** heuristic, post comment (single- or multi-line), delete comment (the Undo window).
 - `src/content/` — injected on github.com. `index.ts` mounts the dock, **tracks the last
   diff selection**, bridges ask/post. `dock/dock-panel.ts` = the UI, `dock/icons.ts` =
   inline SVGs. `selection.ts` = DOM → `{file, line, side, code}` + `reviewTarget` (post anchor,
@@ -40,7 +40,8 @@ a native-messaging host). No third-party SaaS. GitHub-only.
   `dist/src/help/help.html`; opened via the background's `chrome.tabs.create`. Screenshots live in
   `public/help/*.png` (copied to `dist/help/`). Static HTML/CSS, no module script (MV3 CSP).
 - `src/shared/` — `types.ts`, `messages.ts` (wire protocols), `storage.ts` (settings),
-  `prompt.ts` (`buildUserContent`; the native host mirrors it).
+  `prompt.ts` (`buildUserContent`; the native host mirrors it), `persistence.ts` (per-PR
+  conversation/draft store, keyed by `repo#prNumber`), `redact.ts` (mask secrets before send).
 - `native-host/reviewer-host.mjs` — Node host; shells lean `claude -p`. `install.sh`
   registers it.
 - `manifest.config.ts` — CRXJS MV3 manifest (fixed `key` → stable ext id `cafladk…`).

@@ -52,15 +52,21 @@ third-party server.
   (suggestion, issue, nit, … · blocking / non-blocking / if-minor) so authors instantly see
   what's blocking vs. optional.
 - **Post line-anchored review comments** (single- or multi-line) straight to the PR via your
-  own GitHub token.
+  own GitHub token — gated by a **confirm step** (shows the exact `repo · path:line`) and a
+  **10-second Undo** afterwards, so a misfire is one click to retract.
 - **Native, adaptive UI** — the dock inherits GitHub's light/dark theme so it feels
   built-in; sharp Cortex identity, line icons, loading states, and **color-blind-safe**
   status (icon + label, never colour alone).
 - **Local & private** — keys/token live only in your browser; code goes only to Anthropic
-  (your account) and `api.github.com` (your token). No third-party SaaS.
+  (your account) and `api.github.com` (your token). No third-party SaaS. **Obvious secrets**
+  (API keys, private keys, JWTs, high-entropy tokens) are **masked before anything is sent**,
+  with a dock notice when they are.
 - **Built-in features page** — a **?** button in the dock header opens an in-app
   features tour (with screenshots) in a new tab — served by the extension itself, no internet
   needed.
+- **Persists per PR** — your conversation and the comment you're drafting are remembered for
+  each PR and restored when you come back (after a reload or navigating away), stored only in
+  your browser.
 
 ---
 

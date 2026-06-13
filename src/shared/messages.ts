@@ -48,7 +48,16 @@ export interface ErrorMessage {
   message: string
 }
 
-export type BackgroundToContent = ChunkMessage | DoneMessage | ErrorMessage
+/** background -> content: out-of-band notice that some secrets were masked before the request
+ *  was sent to the model. Emitted (if any) before the first CHUNK. */
+export interface MetaMessage {
+  type: 'META'
+  id: string
+  /** How many secrets were masked across the request's code fields. */
+  redactedSecrets: number
+}
+
+export type BackgroundToContent = ChunkMessage | DoneMessage | ErrorMessage | MetaMessage
 
 // ---------------------------------------------------------------------------
 // 2. Background worker <-> native host (native messaging)
@@ -127,19 +136,33 @@ export interface TestGapsMessage {
   prNumber: number
 }
 
+/** content -> background: delete a review comment (the post-then-Undo window). */
+export interface DeleteCommentMessage {
+  type: 'GH_DELETE_COMMENT'
+  repo: string
+  /** The `id` returned when the comment was created. */
+  commentId: number
+}
+
 /** content -> background: open the bundled features/help page in a new tab. The background
  *  owns `chrome.tabs`, which content scripts can't call. */
 export interface OpenHelpMessage {
   type: 'OPEN_HELP'
 }
 
-export type GithubRequest = PostCommentMessage | TestGapsMessage | OpenHelpMessage
+export type GithubRequest =
+  | PostCommentMessage
+  | DeleteCommentMessage
+  | TestGapsMessage
+  | OpenHelpMessage
 
 /** background -> content: result of a GitHub operation. */
 export interface GithubResult {
   ok: boolean
   /** HTML URL of the created comment, on success. */
   url?: string
+  /** Numeric id of the created comment, so the dock can offer an Undo (delete). */
+  commentId?: number
   error?: string
 }
 

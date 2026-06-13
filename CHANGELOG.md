@@ -49,6 +49,19 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   page** (in a new tab) showcasing every capability with screenshots. It's a real
   extension-served page (`src/help/help.html` → `chrome-extension://…`, adaptive light/dark),
   opened via the background (`chrome.tabs.create`) — no internet, no third party. (Phase 3b)
+- **Persistent threads per PR** — your conversation **and** the unsent composer draft now
+  autosave to `chrome.storage.local` keyed by `repo#prNumber` and **restore when you return to a
+  PR** (after a reload or in-page navigation). A 50-PR LRU cap keeps storage bounded. Also fixes a
+  bug where navigating between PRs carried one PR's conversation onto another. (Phase 3c)
+- **Confirm + Undo before posting** — *Post to line* now asks you to **confirm the exact target**
+  (`repo · path:line`) before the public write, and offers a **10-second Undo** afterwards that
+  deletes the comment. Belt-and-suspenders for the one irreversible action in the tool. A
+  **Refresh** action shows the comment inline (GitHub's SPA won't render an API-posted comment on
+  its own); the composer clears on a successful post and is restored if you Undo. (Phase 3c)
+- **Secret redaction** — obvious secrets (API-key prefixes, private-key blocks, JWTs,
+  `secret = "…"` assignments, and high-entropy tokens) are **masked before the request leaves the
+  browser**, across the selection, the diff hunk, and whole-PR patches. The dock shows a notice
+  when something was masked. Reinforces "your key, no third-party SaaS." (Phase 3c)
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated

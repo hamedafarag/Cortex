@@ -167,16 +167,16 @@ threaded follow-ups (all built on existing primitives).
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
 | Per-selection threaded follow-ups (conversation history) | CodeRabbit chat, Greptile, Korbit | ✅ | L / High |
-| Persist conversation / findings per PR | Reviewable, CodeStream | 🟡 | M / M |
+| Persist conversation / findings per PR | Reviewable, CodeStream | ✅ | M / M |
 | Review-progress / mark-as-viewed tracking | GitHub "Viewed", Gerrit, Reviewable | ⬜ | M / L |
 | Export review as markdown / save findings | What The Diff | ⬜ | L / L |
 
 - **Threaded follow-ups** — nearly free: `AskRequest.history` already exists and both
   providers pass it to the model. Only the dock (accumulate turns) and content script
   (populate `history` on submit) are missing.
-- **Persist per PR** — store a per-PR record keyed by `repo#prNumber` (already parsed) in
-  `chrome.storage.local`: conversation turns + draft/pending comments; reload on `mount()`.
-  Prerequisite for any future batch-review draft persistence.
+- **Persist per PR** — ✅ **shipped (3c):** `shared/persistence.ts` stores a per-PR record keyed by
+  `repo#prNumber` in `chrome.storage.local` (conversation turns + draft, LRU-capped) and restores
+  on mount / PR change. Prerequisite for any future batch-review draft persistence.
 - **Mark-as-viewed tracking** — **skip.** GitHub ships per-file "Viewed" with a progress bar
   natively; reimplementing fights GitHub's DOM for low marginal value. The only Cortex-specific
   angle (marking which files *Cortex* AI-reviewed) is better folded into the per-file table.
@@ -187,21 +187,21 @@ threaded follow-ups (all built on existing primitives).
 
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
-| Sensitive-code / secret redaction before sending to LLM | Bito, Snyk, general DLP | ⬜ | M / M |
+| Sensitive-code / secret redaction before sending to LLM | Bito, Snyk, general DLP | ✅ | M / M |
 | Slash / quick commands in the dock (`/summarize`, `/review`, `/security`) | Sourcery, Qodo, Bito, CodeRabbit | ⬜ | L / M |
-| Undo / confirm before posting a public write | GitHub pending-review batching | ⬜ | L / M |
+| Undo / confirm before posting a public write | GitHub pending-review batching | ✅ | L / M |
 
-- **Secret redaction** — a regex/entropy scrubber in the background's content-build path that
-  masks likely secrets before the request goes out, with a dock notice when something was
-  redacted. Strengthens the "your key, no third-party SaaS" trust story. Scope to obvious-secret
-  patterns; don't claim full DLP.
+- **Secret redaction** — ✅ **shipped (3c):** `shared/redact.ts` masks likely secrets in the
+  background before the request goes out, across the selection / diff hunk / whole-PR patches,
+  with a dock notice when something was redacted. Strengthens the "your key, no third-party SaaS"
+  trust story. Scoped to obvious-secret patterns + a conservative high-entropy backstop; not full DLP.
 - **Slash commands** — as the dock grows summary/review/lens actions, a lightweight `/`-command
   parser in the existing input unifies buttons and typing. Route prefixes to the same handlers
   as the buttons — no new infra.
-- **Confirm / undo before posting** — posting fires immediately on click today. Add a confirm
-  affordance, or post-then-show "Undo" that deletes the just-created comment
-  (`DELETE /pulls/comments/{id}`) within a few seconds. Directly serves the human-in-the-loop
-  identity and guards against misfires on repos the user doesn't own. (See Safety in CLAUDE.md.)
+- **Confirm / undo before posting** — ✅ **shipped (3c):** *Post to line* now shows a confirm bar
+  with the exact target, then a 10s "Undo" that deletes the just-created comment
+  (`DELETE /pulls/comments/{id}`) — plus a Refresh, since GitHub's SPA won't render an API-posted
+  comment inline. Serves the human-in-the-loop identity and guards against misfires. (See Safety in CLAUDE.md.)
 
 ---
 
@@ -229,11 +229,13 @@ launcher button → full-width panel.
 whole-PR **review** (severity-tagged findings list); **specialist lenses** (security / perf /
 errors / readability); deterministic **test-gap** check.
 
-**Planned (Phase 3c):** persist per PR; confirm/undo before posting; secret redaction. *(Later:
-GitLab/Bitbucket, Web Store packaging, Windows native-host script.)*
+**Phase 3c (persistence & trust):** persist conversation + draft per PR (`repo#prNumber`,
+`chrome.storage.local`, LRU-capped); confirm + 10s Undo before posting (+ a Refresh, since
+GitHub's SPA won't render an API-posted comment inline); secret redaction before the request
+leaves the browser. *(Later: GitLab/Bitbucket, Web Store packaging, Windows native-host script.)*
 
-**Not present:** batch/pending review; review verdict; secret redaction; slash commands;
-undo-after-post; export markdown; comment threading/replies; editable templates.
+**Not present:** batch/pending review; review verdict; slash commands; export markdown;
+comment threading/replies; editable templates.
 
 ## What we deliberately won't build
 

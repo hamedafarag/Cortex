@@ -11,9 +11,16 @@ import {
   type TestGapsMessage,
   type TestGapsResult,
   type OpenHelpMessage,
+  type DeleteCommentMessage,
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
-import { captureSelection, reviewTarget, type SelectionContext } from './selection'
+import {
+  captureSelection,
+  reviewTarget,
+  type SelectionContext,
+  type ReviewTarget,
+} from './selection'
+import { loadThread, saveThread } from '../shared/persistence'
 import {
   CANNED_COMMENTS,
   CC_LABELS,
@@ -58,6 +65,9 @@ function ask(request: AskRequest, dock: DockPanel, display?: string): void {
   port.onMessage.addListener((msg: BackgroundToContent) => {
     if (msg.id !== id) return
     switch (msg.type) {
+      case 'META':
+        dock.showRedactionNotice(msg.redactedSecrets)
+        break
       case 'CHUNK':
         dock.appendText(msg.delta)
         break
@@ -284,7 +294,8 @@ async function onTestGaps(dock: DockPanel): Promise<void> {
   }
 }
 
-async function postComment(dock: DockPanel, text: string): Promise<void> {
+/** Step 1: validate the target and ask the dock to confirm the public write before firing. */
+function postComment(dock: DockPanel, text: string): void {
   const pr = parsePr()
   if (!pr) {
     dock.postFailed('Open a pull request first.')
@@ -295,7 +306,15 @@ async function postComment(dock: DockPanel, text: string): Promise<void> {
     dock.postFailed('Select a diff line first.')
     return
   }
+  const lines =
+    target.startLine && target.startLine !== target.line
+      ? `${target.startLine}-${target.line}`
+      : String(target.line)
+  dock.confirmPost(`${pr.repo} · ${target.path}:${lines}`, () => void doPost(dock, pr, text, target))
+}
 
+/** Step 2: the confirmed write. On success, offers an Undo (delete) via the returned id. */
+async function doPost(dock: DockPanel, pr: Pr, text: string, target: ReviewTarget): Promise<void> {
   dock.postPending()
   const message: GithubRequest = {
     type: 'GH_POST_COMMENT',
@@ -310,26 +329,47 @@ async function postComment(dock: DockPanel, text: string): Promise<void> {
   }
   try {
     const result = (await chrome.runtime.sendMessage(message)) as GithubResult
-    if (result?.ok && result.url) dock.postDone(result.url)
-    else dock.postFailed(result?.error ?? 'Post failed.')
+    if (result?.ok && result.url) {
+      const id = result.commentId
+      dock.postDone(result.url, {
+        onRefresh: () => location.reload(), // GitHub's SPA won't render an API-posted comment inline
+        onUndo: id != null ? () => void undoPost(dock, pr, id, text) : undefined,
+      })
+    } else {
+      dock.postFailed(result?.error ?? 'Post failed.')
+    }
   } catch (err) {
     dock.postFailed(err instanceof Error ? err.message : String(err))
   }
 }
 
-function mount(): void {
-  if (!parsePr()) return
-  if (document.querySelector(DOCK_SELECTOR)) return // already mounted
+/** Undo a just-posted comment by deleting it (the post-then-Undo window). Restores the
+ *  retracted text to the composer so the reviewer can fix and re-post. */
+async function undoPost(dock: DockPanel, pr: Pr, commentId: number, text: string): Promise<void> {
+  dock.postUndoing()
+  try {
+    const result = (await chrome.runtime.sendMessage({
+      type: 'GH_DELETE_COMMENT',
+      repo: pr.repo,
+      commentId,
+    } satisfies DeleteCommentMessage)) as GithubResult
+    if (result?.ok) dock.postUndone(text)
+    else dock.postFailed(result?.error ?? 'Undo failed — the comment may already be gone.')
+  } catch (err) {
+    dock.postFailed(err instanceof Error ? err.message : String(err))
+  }
+}
 
+/** Create the dock and wire its (PR-agnostic) callbacks. Per-PR state — the persisted
+ *  thread — is bound separately in `syncToPr`. */
+function buildDock(): DockPanel {
   const dock = new DockPanel()
-  currentDock = dock
   dock.onSubmit = (question) => onSubmit(dock, question)
   dock.onSuggest = () => onSuggest(dock)
   dock.onSummarize = () => onSummarize(dock)
   dock.onReview = (lensId) => onReview(dock, lensId)
   dock.onTestGaps = () => void onTestGaps(dock)
   dock.onHelp = () => void chrome.runtime.sendMessage({ type: 'OPEN_HELP' } satisfies OpenHelpMessage)
-  dock.renderLenses(REVIEW_LENSES)
   dock.onInsertComment = (body) => {
     const inserted = insertComment(body)
     dock.flashTray(inserted ? 'Inserted' : 'Focus a GitHub comment box first', inserted)
@@ -341,15 +381,74 @@ function mount(): void {
   dock.onPost = (text) => void postComment(dock, text)
   dock.renderComments(CANNED_COMMENTS)
   dock.renderLabels(CC_LABELS, CC_DECORATIONS)
-  dock.mount()
-  if (lastSelection) dock.setSelection(selectionLabel(lastSelection))
+  dock.renderLenses(REVIEW_LENSES)
+  return dock
 }
 
-function unmountIfNotPr(): void {
-  if (!parsePr()) {
+// ── Per-PR thread persistence ──────────────────────────────────────────
+type Pr = { repo: string; prNumber: number }
+let currentPr: Pr | null = null
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+let pendingSave: (() => void) | null = null
+
+const samePr = (a: Pr, b: Pr): boolean => a.repo === b.repo && a.prNumber === b.prNumber
+
+/** Run any debounced save now (before a navigation swaps the thread, or on page hide). */
+function flushSave(): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = undefined
+  const run = pendingSave
+  pendingSave = null
+  run?.()
+}
+
+/** Persist the dock's thread for `pr`. Committed changes (`immediate`) save now; draft typing
+ *  is debounced so we don't write storage on every keystroke. */
+function persistThread(dock: DockPanel, pr: Pr, immediate: boolean): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  const run = (): void => {
+    saveTimer = undefined
+    pendingSave = null
+    void saveThread(pr.repo, pr.prNumber, dock.getThread()).catch(() => {})
+  }
+  pendingSave = run
+  if (immediate) run()
+  else saveTimer = setTimeout(run, 500)
+}
+
+/** Mount/tear down the dock and swap the persisted thread as the URL changes — including SPA
+ *  navigation between PRs (where the same dock instance is reused). */
+function syncToPr(): void {
+  const pr = parsePr()
+  if (!pr) {
+    flushSave()
     document.querySelector(DOCK_SELECTOR)?.remove()
     currentDock = null
+    currentPr = null
+    return
   }
+  if (currentDock && currentPr && samePr(currentPr, pr)) return // same PR — nothing to swap
+
+  flushSave() // persist the outgoing PR before we rebind
+
+  const freshBuild = !currentDock
+  if (!currentDock) {
+    currentDock = buildDock()
+    currentDock.mount()
+    if (lastSelection) currentDock.setSelection(selectionLabel(lastSelection))
+  }
+  const dock = currentDock
+  currentPr = pr
+  dock.onThreadChange = (immediate) => persistThread(dock, pr, immediate)
+  void loadThread(pr.repo, pr.prNumber)
+    .then((saved) => {
+      if (!currentPr || !samePr(currentPr, pr)) return // navigated again before this resolved
+      if (saved) dock.restoreThread(saved)
+      else if (!freshBuild) dock.newThread() // clear a previous PR's thread (fresh dock is empty)
+    })
+    .catch(() => {
+      if (currentPr && samePr(currentPr, pr) && !freshBuild) dock.newThread()
+    })
 }
 
 // Track the last diff selection once, document-wide, and reflect it in the chip.
@@ -365,11 +464,11 @@ document.addEventListener('selectionchange', () => {
 // Remember which GitHub comment box was last focused (for canned-comment insert).
 trackCommentFields()
 
-// Mount now and on GitHub's client-side navigations (SPA — no full reload).
-mount()
+// Mount now and on GitHub's client-side navigations (SPA — no full reload). syncToPr swaps
+// the persisted thread when the PR changes.
+syncToPr()
 for (const evt of ['turbo:render', 'pjax:end', 'popstate']) {
-  window.addEventListener(evt, () => {
-    unmountIfNotPr()
-    mount()
-  })
+  window.addEventListener(evt, () => syncToPr())
 }
+// Flush a debounced draft save before the page goes away (full navigation / close).
+window.addEventListener('pagehide', () => flushSave())
