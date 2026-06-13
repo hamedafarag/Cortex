@@ -127,19 +127,33 @@ export interface TestGapsMessage {
   prNumber: number
 }
 
+/** content -> background: delete a review comment (the post-then-Undo window). */
+export interface DeleteCommentMessage {
+  type: 'GH_DELETE_COMMENT'
+  repo: string
+  /** The `id` returned when the comment was created. */
+  commentId: number
+}
+
 /** content -> background: open the bundled features/help page in a new tab. The background
  *  owns `chrome.tabs`, which content scripts can't call. */
 export interface OpenHelpMessage {
   type: 'OPEN_HELP'
 }
 
-export type GithubRequest = PostCommentMessage | TestGapsMessage | OpenHelpMessage
+export type GithubRequest =
+  | PostCommentMessage
+  | DeleteCommentMessage
+  | TestGapsMessage
+  | OpenHelpMessage
 
 /** background -> content: result of a GitHub operation. */
 export interface GithubResult {
   ok: boolean
   /** HTML URL of the created comment, on success. */
   url?: string
+  /** Numeric id of the created comment, so the dock can offer an Undo (delete). */
+  commentId?: number
   error?: string
 }
 

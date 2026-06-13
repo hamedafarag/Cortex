@@ -52,7 +52,8 @@ third-party server.
   (suggestion, issue, nit, … · blocking / non-blocking / if-minor) so authors instantly see
   what's blocking vs. optional.
 - **Post line-anchored review comments** (single- or multi-line) straight to the PR via your
-  own GitHub token.
+  own GitHub token — gated by a **confirm step** (shows the exact `repo · path:line`) and a
+  **10-second Undo** afterwards, so a misfire is one click to retract.
 - **Native, adaptive UI** — the dock inherits GitHub's light/dark theme so it feels
   built-in; sharp Cortex identity, line icons, loading states, and **color-blind-safe**
   status (icon + label, never colour alone).

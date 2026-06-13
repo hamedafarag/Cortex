@@ -19,6 +19,7 @@ import { ClaudeCodeProvider } from './providers/claudeCode'
 import {
   getPullHeadSha,
   createReviewComment,
+  deleteReviewComment,
   getDiffHunk,
   getPullMeta,
   getPrPatches,
@@ -164,7 +165,26 @@ chrome.runtime.onMessage.addListener((message: GithubRequest, _sender, sendRespo
           start_line: message.startLine,
           start_side: message.startSide,
         })
-        sendResponse({ ok: true, url: comment.html_url } satisfies GithubResult)
+        sendResponse({
+          ok: true,
+          url: comment.html_url,
+          commentId: comment.id,
+        } satisfies GithubResult)
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        } satisfies GithubResult)
+      }
+    })()
+    return true // keep the channel open for the async sendResponse
+  }
+
+  if (message?.type === 'GH_DELETE_COMMENT') {
+    void (async () => {
+      try {
+        await deleteReviewComment(message.repo, message.commentId)
+        sendResponse({ ok: true } satisfies GithubResult)
       } catch (err) {
         sendResponse({
           ok: false,

@@ -11,9 +11,15 @@ import {
   type TestGapsMessage,
   type TestGapsResult,
   type OpenHelpMessage,
+  type DeleteCommentMessage,
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
-import { captureSelection, reviewTarget, type SelectionContext } from './selection'
+import {
+  captureSelection,
+  reviewTarget,
+  type SelectionContext,
+  type ReviewTarget,
+} from './selection'
 import { loadThread, saveThread } from '../shared/persistence'
 import {
   CANNED_COMMENTS,
@@ -285,7 +291,8 @@ async function onTestGaps(dock: DockPanel): Promise<void> {
   }
 }
 
-async function postComment(dock: DockPanel, text: string): Promise<void> {
+/** Step 1: validate the target and ask the dock to confirm the public write before firing. */
+function postComment(dock: DockPanel, text: string): void {
   const pr = parsePr()
   if (!pr) {
     dock.postFailed('Open a pull request first.')
@@ -296,7 +303,15 @@ async function postComment(dock: DockPanel, text: string): Promise<void> {
     dock.postFailed('Select a diff line first.')
     return
   }
+  const lines =
+    target.startLine && target.startLine !== target.line
+      ? `${target.startLine}-${target.line}`
+      : String(target.line)
+  dock.confirmPost(`${pr.repo} · ${target.path}:${lines}`, () => void doPost(dock, pr, text, target))
+}
 
+/** Step 2: the confirmed write. On success, offers an Undo (delete) via the returned id. */
+async function doPost(dock: DockPanel, pr: Pr, text: string, target: ReviewTarget): Promise<void> {
   dock.postPending()
   const message: GithubRequest = {
     type: 'GH_POST_COMMENT',
@@ -311,8 +326,32 @@ async function postComment(dock: DockPanel, text: string): Promise<void> {
   }
   try {
     const result = (await chrome.runtime.sendMessage(message)) as GithubResult
-    if (result?.ok && result.url) dock.postDone(result.url)
-    else dock.postFailed(result?.error ?? 'Post failed.')
+    if (result?.ok && result.url) {
+      const id = result.commentId
+      dock.postDone(result.url, {
+        onRefresh: () => location.reload(), // GitHub's SPA won't render an API-posted comment inline
+        onUndo: id != null ? () => void undoPost(dock, pr, id, text) : undefined,
+      })
+    } else {
+      dock.postFailed(result?.error ?? 'Post failed.')
+    }
+  } catch (err) {
+    dock.postFailed(err instanceof Error ? err.message : String(err))
+  }
+}
+
+/** Undo a just-posted comment by deleting it (the post-then-Undo window). Restores the
+ *  retracted text to the composer so the reviewer can fix and re-post. */
+async function undoPost(dock: DockPanel, pr: Pr, commentId: number, text: string): Promise<void> {
+  dock.postUndoing()
+  try {
+    const result = (await chrome.runtime.sendMessage({
+      type: 'GH_DELETE_COMMENT',
+      repo: pr.repo,
+      commentId,
+    } satisfies DeleteCommentMessage)) as GithubResult
+    if (result?.ok) dock.postUndone(text)
+    else dock.postFailed(result?.error ?? 'Undo failed — the comment may already be gone.')
   } catch (err) {
     dock.postFailed(err instanceof Error ? err.message : String(err))
   }

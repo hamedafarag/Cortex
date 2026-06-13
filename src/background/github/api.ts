@@ -39,7 +39,10 @@ async function githubFetch(path: string, init?: RequestInit): Promise<unknown> {
     }
     throw new Error(message)
   }
-  return res.json()
+  // DELETE returns 204 No Content; tolerate any empty body so callers don't choke on res.json().
+  if (res.status === 204) return null
+  const text = await res.text()
+  return text ? JSON.parse(text) : null
 }
 
 /** The PR's head commit SHA — required as `commit_id` when posting a comment. */
@@ -321,4 +324,9 @@ export async function createReviewComment(
     method: 'POST',
     body: JSON.stringify(params),
   })) as CreatedComment
+}
+
+/** Delete a review comment by id — backs the dock's post-then-Undo window. */
+export async function deleteReviewComment(repo: string, commentId: number): Promise<void> {
+  await githubFetch(`/repos/${repo}/pulls/comments/${commentId}`, { method: 'DELETE' })
 }

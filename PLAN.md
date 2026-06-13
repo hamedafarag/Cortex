@@ -168,8 +168,13 @@ Still reviewer-driven, on demand, never autonomous.
   restore on mount. `syncToPr()` swaps the thread as the PR changes (fixing a latent SPA-nav bug
   where one PR's conversation carried onto another). *Verified: 12 Node + 16 dock assertions + live
   in Edge (restore across a real reload, per-PR scoping, empty clears storage).*
-- [ ] **Confirm / undo before posting** — posting is a real public write (see Safety): add a
-  confirm affordance, or a post-then-Undo window (`DELETE /pulls/comments/{id}`).
+- [x] **Confirm / undo before posting** — *Post to line* now shows a **confirm bar** with the exact
+  target (`repo · path:line`, range-aware) before the write, **and** a **10s Undo** window after a
+  successful post (`deleteReviewComment` → `DELETE /pulls/comments/{id}`; `GH_POST_COMMENT` returns the
+  `commentId`, `githubFetch` tolerates the 204). Posting is now `confirm → doPost → undoPost`. A
+  **Refresh** action reloads to show the API-posted comment inline (GitHub's SPA won't render it
+  otherwise); the composer clears on post and is restored on undo. *Verified: 16 + 13 dock UI + 5
+  Node API assertions, typecheck + build; live confirm-gate in Edge, public write left to the user.*
 - [ ] **Secret redaction** — mask obvious secrets (key patterns / high-entropy strings) in the
   selection before it leaves the browser; show a notice in the dock when something was
   redacted. Strengthens the "your key, no third-party SaaS" trust story.

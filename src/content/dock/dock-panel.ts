@@ -246,6 +246,24 @@ const STYLES = `
   .post-status { font-size: 11px; margin-right: auto; display: inline-flex; align-items: center; gap: 6px; min-width: 0 }
   .post-status .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
   .post-status.error { color: var(--danger) }
+  .post-status.confirm { color: var(--attention) }
+  .post-status .label .where { font-family: var(--mono); color: var(--fg); font-weight: 600 }
+  .post-status .mini {
+    font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; flex: none;
+    border: 1px solid var(--border); border-radius: 6px; padding: 2px 9px;
+    background: var(--bg); color: var(--fg);
+  }
+  .post-status .mini.go { background: var(--cortex); border-color: var(--cortex); color: #fff }
+  .post-status .mini:hover { border-color: var(--cortex) }
+  /* Undo / Refresh buttons on the "comment posted" row */
+  .status-row .undo, .status-row .refresh {
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px; margin: 0 2px 0 6px;
+    border: 1px solid color-mix(in srgb, var(--cortex) 45%, var(--border)); border-radius: 6px;
+    padding: 1px 9px; background: var(--bg); color: var(--cortex);
+  }
+  .status-row .undo:hover, .status-row .refresh:hover { background: color-mix(in srgb, var(--cortex) 10%, transparent) }
+  .status-row .hint { font-size: 11px; color: var(--fg-muted); margin-left: 4px }
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 13px; border-radius: 8px; font: inherit; font-weight: 600;
@@ -711,6 +729,43 @@ export class DockPanel {
   }
 
   // ── post lifecycle ─────────────────────────────────────────────────
+  private undoTimer: ReturnType<typeof setTimeout> | undefined
+
+  /** Confirm the public write before it fires. Shows the exact target; Confirm runs
+   *  `onConfirm`, Cancel backs out. Posting is the one irreversible-ish action, so we gate it. */
+  confirmPost(where: string, onConfirm: () => void): void {
+    this.host.removeAttribute('collapsed')
+    this.showAnswerActions(false)
+    this.postBtn.disabled = true
+    this.postStatusEl.className = 'post-status confirm'
+    this.postStatusEl.innerHTML = icon('comment', 13)
+    const label = document.createElement('span')
+    label.className = 'label'
+    const target = document.createElement('span')
+    target.className = 'where'
+    target.textContent = where
+    label.append('Post to ', target, '?')
+    const go = document.createElement('button')
+    go.type = 'button'
+    go.className = 'mini go'
+    go.textContent = 'Confirm'
+    const cancel = document.createElement('button')
+    cancel.type = 'button'
+    cancel.className = 'mini'
+    cancel.textContent = 'Cancel'
+    this.postStatusEl.append(label, go, cancel)
+    const close = (): void => {
+      this.postStatusEl.replaceChildren()
+      this.postStatusEl.className = 'post-status'
+      this.postBtn.disabled = false
+    }
+    go.addEventListener('click', () => {
+      close()
+      onConfirm()
+    })
+    cancel.addEventListener('click', close)
+  }
+
   postPending(): void {
     this.host.removeAttribute('collapsed')
     this.showAnswerActions(false)
@@ -719,22 +774,68 @@ export class DockPanel {
     this.postStatusEl.innerHTML = `<span class="spinner">${icon('spinner', 13)}</span><span class="label">Posting…</span>`
   }
 
-  postDone(url: string): void {
+  /** Posted OK. GitHub's SPA won't render an API-posted comment inline, so we offer a
+   *  **Refresh** (reload to show it) and, for a short window, an **Undo** (delete it). The
+   *  composer is cleared since the comment was sent. */
+  postDone(url: string, actions: { onUndo?: () => void; onRefresh?: () => void } = {}): void {
     this.postBtn.disabled = false
     this.postStatusEl.replaceChildren()
     this.host.removeAttribute('collapsed')
     this.showAnswerActions(false)
+    // The comment was sent — clear the draft so it doesn't linger (and isn't restored on reload).
+    if (this.inputEl.value) {
+      this.inputEl.value = ''
+      this.onThreadChange?.(true)
+    }
     this.answerEl.className = 'answer'
     this.setAnswerHtml(
       this.finalizedHtml() +
-        `<div class="status-row ok">${icon('check', 16)}<span>Comment posted — </span>` +
+        `<div class="status-row ok">${icon('check', 16)}<span>Comment posted</span>` +
+        `<button type="button" class="undo">${icon('undo', 12)}Undo</button>` +
+        `<button type="button" class="refresh" title="Reload the page to show the comment in the diff">${icon('refresh', 12)}Refresh to show it</button>` +
         `<a target="_blank" rel="noopener noreferrer">view on GitHub ${icon('externalLink', 12)}</a></div>`,
     )
-    this.answerEl.querySelector('.status-row.ok a')!.setAttribute('href', url)
+    const row = this.answerEl.querySelector('.status-row.ok')!
+    row.querySelector('a')!.setAttribute('href', url)
+    const undoBtn = row.querySelector('.undo') as HTMLButtonElement
+    const refreshBtn = row.querySelector('.refresh') as HTMLButtonElement
+    if (actions.onRefresh) refreshBtn.addEventListener('click', actions.onRefresh)
+    else refreshBtn.remove()
+    if (actions.onUndo) {
+      undoBtn.addEventListener('click', () => {
+        clearTimeout(this.undoTimer)
+        actions.onUndo!()
+      })
+      this.undoTimer = setTimeout(() => undoBtn.remove(), 10_000) // close the undo window
+    } else {
+      undoBtn.remove()
+    }
     this.answerEl.scrollTop = this.answerEl.scrollHeight
   }
 
+  /** Deleting the just-posted comment (the Undo is in flight). */
+  postUndoing(): void {
+    clearTimeout(this.undoTimer)
+    const row = this.answerEl.querySelector('.status-row.ok')
+    if (row) row.innerHTML = `<span class="spinner">${icon('spinner', 14)}</span><span>Retracting…</span>`
+  }
+
+  /** The comment was deleted. Optionally restore the retracted text to the composer so the
+   *  reviewer can fix and re-post. */
+  postUndone(restoreDraft?: string): void {
+    const row = this.answerEl.querySelector('.status-row')
+    if (row) {
+      row.className = 'status-row'
+      row.innerHTML = `${icon('undo', 15)}<span>Comment retracted.</span>`
+    }
+    if (restoreDraft) {
+      this.inputEl.value = restoreDraft
+      this.onThreadChange?.(true)
+    }
+  }
+
   postFailed(message: string): void {
+    clearTimeout(this.undoTimer)
     this.postBtn.disabled = false
     this.postStatusEl.replaceChildren()
     this.showError(message)
