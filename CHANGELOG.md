@@ -68,9 +68,10 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   Single **Post to line** stays for one-off comments.
 - **PR overview / change map** — an **Overview** button (no selection needed) renders a
   **deterministic, no-LLM** "PR at a glance": files changed, additions/deletions and net per file,
-  with a churn bar so you can see where the weight is before reading a line. Built entirely on the
-  file list Cortex already fetches (zero tokens), and rides the same answer path as the test-gap
-  check. (Phase 4a)
+  with a churn bar so you can see where the weight is before reading a line. Multi-module PRs lead
+  with a **By module** rollup (changed paths grouped by directory) before the per-file detail, so
+  scope reads top-down. Built entirely on the file list Cortex already fetches (zero tokens), and
+  rides the same answer path as the test-gap check. (Phase 4a/4b)
 
 ### Changed
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated

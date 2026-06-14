@@ -34,8 +34,9 @@ third-party server.
 - **Threaded follow-ups** — keep asking about the same code in one conversation; each
   follow-up carries the prior turns. **New thread** clears it.
 - **PR overview** — one click renders a **change map**: files changed, additions/deletions and
-  net per file, with a churn bar so you see where the weight is before reading a line. Fully
-  **deterministic — no AI call, no tokens** (no selection needed).
+  net per file, with a churn bar so you see where the weight is before reading a line. PRs that
+  span several areas also get a **By module** rollup (grouped by directory) for at-a-glance scope.
+  Fully **deterministic — no AI call, no tokens** (no selection needed).
 - **Summarize the PR** — one click streams a TL;DR + key changes + per-file gloss + a 1–5
   review-effort rating, grounded in the actual diffs (no selection needed).
 - **Review the whole PR** — one click streams a **findings list** grounded in every changed

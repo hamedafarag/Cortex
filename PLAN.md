@@ -217,8 +217,13 @@ prefer *consuming* its `.codeboarding/` output over reproducing whole-repo analy
   answer area, so follow-ups + the answer→comment bridge still work); long PRs cap at the top 20
   files by churn with a tail note. *Verified: 18 Node assertions on the pure shaping (sums, sort,
   net, status tally, bars, empty PR, determinism, cap) + typecheck + build.*
-- [ ] **4b. Impact-by-module view** — group changed paths by directory/module → grouped list or
-  treemap for at-a-glance scope. Path-only, **no LLM**, no repo fetch.
+- [x] **4b. Impact-by-module view** — **folded into Overview** (no second button): a multi-module
+  PR now leads with a **By module** rollup (changed paths grouped by their first up-to-2 directory
+  segments, `(root)` for top-level files), each with file count + churn bar, then the **By file**
+  detail. Path-only, **no LLM**, no repo fetch; single-module PRs render unchanged (no rollup).
+  Pure `moduleKey` + `assembleOverview` extension in `github/api.ts`. *Verified: 23 Node assertions
+  (2-segment grouping, `(root)`, rollup sums, sort, multi- vs single-module rendering, cap) +
+  typecheck + build.*
 - [ ] **4c. (optional) Changed-component diagram** — LLM-emitted **Mermaid** diagram scoped to the
   components touched by *this PR* (not a whole-repo dep graph), **lazy-loaded** (Mermaid.js is heavy),
   rendered in the shadow root, **labeled approximate** (diff-only grounding can invent edges). If the
