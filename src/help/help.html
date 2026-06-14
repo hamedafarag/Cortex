@@ -107,6 +107,8 @@
       footer { text-align: center; padding: 40px 0 0; color: var(--fg-muted); font-size: 13px; }
       footer .pill { display: inline-block; font-family: var(--mono); font-size: 11px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; }
       footer .links { display: flex; gap: 16px; justify-content: center; margin-top: 12px; }
+      footer .credit { font-size: 12px; margin-top: 6px; }
+      footer a { color: var(--accent); }
       .privacy { max-width: 600px; margin: 18px auto 0; font-size: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
     </style>
   </head>
@@ -213,7 +215,26 @@
         </div>
       </section>
 
-      <!-- 5. Summarize -->
+      <!-- 5. Overview -->
+      <section class="feature">
+        <figure class="shot">
+          <img src="/help/overview.png" alt="A PR overview: a By module rollup and a By file change map, each file with additions, deletions and a churn bar." />
+          <figcaption>Overview → change map (no AI, no tokens)</figcaption>
+        </figure>
+        <div class="copy">
+          <span class="kicker">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-9"/></svg>
+            PR overview
+          </span>
+          <h2>See where the weight is, instantly</h2>
+          <p>A <b>deterministic</b> change map — files changed, additions/deletions and net per file,
+            each with a <b>churn bar</b> so you know where to look before reading a line. PRs that
+            span several areas also get a <b>By module</b> rollup for at-a-glance scope. <b>No AI
+            call, no tokens</b> — built from the diff stats GitHub already returns.</p>
+        </div>
+      </section>
+
+      <!-- 6. Summarize -->
       <section class="feature">
         <figure class="shot">
           <img src="/help/summary.png" alt="A whole-PR summary: TL;DR, key changes, per-file gloss, and a 1 to 5 review-effort rating." />
@@ -340,6 +361,8 @@
 
       <footer>
         <p><span class="pill" id="version">v0.1.0</span></p>
+        <p class="credit">Built by <a href="https://github.com/hamedafarag" target="_blank" rel="noopener noreferrer">Hamed Farag</a>
+          · open source (MIT) at <a href="https://github.com/hamedafarag/Cortex" target="_blank" rel="noopener noreferrer">github.com/hamedafarag/Cortex</a></p>
         <div class="links">
           <a href="../options/options.html">Open settings</a>
           <a href="https://github.com/hamedafarag/Cortex" target="_blank" rel="noopener noreferrer">GitHub</a>

@@ -66,8 +66,21 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   **pending review** (a panel of line comments, persisted per PR) and **Submit** it as one review
   with a **Comment / Approve / Request changes** verdict (GitHub Reviews API), gated by a confirm.
   Single **Post to line** stays for one-off comments.
+- **PR overview / change map** — an **Overview** button (no selection needed) renders a
+  **deterministic, no-LLM** "PR at a glance": files changed, additions/deletions and net per file,
+  with a churn bar so you can see where the weight is before reading a line. Multi-module PRs lead
+  with a **By module** rollup (changed paths grouped by directory) before the per-file detail, so
+  scope reads top-down. Built entirely on the file list Cortex already fetches (zero tokens), and
+  rides the same answer path as the test-gap check. (Phase 4a/4b)
 
 ### Changed
+- **CLI backend is now opt-in** — `nativeMessaging` moved from a required permission to
+  `optional_permissions`. The default install (Anthropic API key) carries the smallest permission
+  surface; choosing the Claude Code CLI backend in options requests the permission at runtime, and
+  the CLI provider degrades cleanly if it isn't granted. Prep for a Chrome Web Store listing.
+- **Packaging** — `npm run package` builds and zips a store-ready `web-store/cortex-<version>.zip`;
+  `install.sh` now accepts the store-assigned extension id (`./install.sh <id>`) for opt-in CLI
+  users, since the Web Store assigns its own id. Added STORE-LISTING.md + PRIVACY.md; version → 0.1.0.
 - **Dock collapses to a launcher button** — instead of an always-on bottom bar that floated
   over GitHub's content, the dock now starts as a small Cortex button (bottom-right). Click it
   to expand the **full-width** dock; collapse back to the button when done. Fixes the expanded

@@ -17,7 +17,11 @@ export default defineManifest({
     'In-page AI copilot for reviewing GitHub pull requests — on your own Claude ' +
     'subscription or API key. No SaaS middleman.',
 
-  permissions: ['storage', 'nativeMessaging'],
+  // `nativeMessaging` is opt-in (the Claude Code CLI backend): requested at runtime from the
+  // options page only if the user chooses that backend, so the default install — Anthropic API
+  // key only — carries the smallest permission surface.
+  permissions: ['storage'],
+  optional_permissions: ['nativeMessaging'],
   host_permissions: [
     'https://github.com/*',
     'https://api.anthropic.com/*',

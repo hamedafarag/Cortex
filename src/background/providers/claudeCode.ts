@@ -15,11 +15,27 @@ const HOST_MISSING_MESSAGE =
   'The Claude Code native host is not installed. Run native-host/install.sh, then ' +
   'fully restart the browser.'
 
+const PERMISSION_MISSING_MESSAGE =
+  'The Claude Code CLI backend is off. Enable it in the extension options — it needs the ' +
+  'native-messaging permission, requested there.'
+
+/** Is the opt-in `nativeMessaging` permission granted? It lives in `optional_permissions`, so
+ *  the default (API-key) install never holds it until the user chooses the CLI backend. */
+async function hasNativeMessaging(): Promise<boolean> {
+  try {
+    return await chrome.permissions.contains({ permissions: ['nativeMessaging'] })
+  } catch {
+    return false
+  }
+}
+
 export class ClaudeCodeProvider implements LlmProvider {
   readonly id = 'claude-code-cli' as const
 
-  /** Available if connecting to the native host doesn't immediately disconnect. */
+  /** Available only if the opt-in permission is granted AND connecting to the native host
+   *  doesn't immediately disconnect. */
   async isAvailable(): Promise<boolean> {
+    if (!(await hasNativeMessaging())) return false
     return new Promise((resolve) => {
       let port: chrome.runtime.Port
       try {
@@ -46,6 +62,10 @@ export class ClaudeCodeProvider implements LlmProvider {
   }
 
   async *ask(req: AskRequest, signal: AbortSignal): AsyncIterable<Chunk> {
+    if (!(await hasNativeMessaging())) {
+      yield { type: 'error', message: PERMISSION_MISSING_MESSAGE }
+      return
+    }
     const { model } = await getSettings()
     const id = crypto.randomUUID()
 

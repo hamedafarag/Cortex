@@ -305,6 +305,154 @@ export function formatTestGapsReport(gaps: TestGaps): string {
   )
 }
 
+// --- PR change map / churn overview (path + diffstat; no LLM) -------------------
+
+/** Short, human label for a GitHub file `status`. */
+const STATUS_LABEL: Record<string, string> = {
+  added: 'added',
+  removed: 'deleted',
+  modified: 'modified',
+  renamed: 'renamed',
+  copied: 'copied',
+  changed: 'changed',
+}
+
+export interface OverviewFile {
+  filename: string
+  status: string
+  additions: number
+  deletions: number
+  /** additions + deletions — the file's total churn. */
+  churn: number
+}
+
+export interface OverviewModule {
+  /** Coarse module key — first up-to-2 path segments (e.g. `src/content`). */
+  module: string
+  files: number
+  additions: number
+  deletions: number
+  churn: number
+}
+
+export interface PrOverview {
+  /** Changed files, sorted by churn (largest first). */
+  files: OverviewFile[]
+  /** Files rolled up by module (directory), sorted by churn (largest first). */
+  modules: OverviewModule[]
+  total: number
+  additions: number
+  deletions: number
+  /** How many files of each status (e.g. `{ modified: 3, added: 2 }`). */
+  byStatus: Record<string, number>
+}
+
+/** Roll a file path up to a coarse "module" key — its first up-to-2 directory segments
+ *  (`src/content/dock/x.ts` → `src/content`); root-level files group under `(root)`. */
+function moduleKey(path: string): string {
+  const segments = path.split('/')
+  if (segments.length === 1) return '(root)'
+  return segments.slice(0, Math.min(2, segments.length - 1)).join('/')
+}
+
+/** Build a deterministic per-file churn map (and a per-module rollup) from the PR's file list.
+ *  Pure, so the shaping is unit-testable. No LLM — just the additions/deletions GitHub already
+ *  returns per file, and the file paths. */
+export function assembleOverview(files: PullFile[]): PrOverview {
+  let additions = 0
+  let deletions = 0
+  const byStatus: Record<string, number> = {}
+  const mapped: OverviewFile[] = files.map((f) => {
+    const a = f.additions ?? 0
+    const d = f.deletions ?? 0
+    additions += a
+    deletions += d
+    byStatus[f.status] = (byStatus[f.status] ?? 0) + 1
+    return { filename: f.filename, status: f.status, additions: a, deletions: d, churn: a + d }
+  })
+  // Largest churn first; stable tiebreak on path so the output is deterministic.
+  mapped.sort((x, y) => y.churn - x.churn || (x.filename < y.filename ? -1 : 1))
+
+  // Roll files up by module (directory) for an at-a-glance scope view.
+  const modMap = new Map<string, OverviewModule>()
+  for (const f of mapped) {
+    const key = moduleKey(f.filename)
+    const m = modMap.get(key) ?? { module: key, files: 0, additions: 0, deletions: 0, churn: 0 }
+    m.files += 1
+    m.additions += f.additions
+    m.deletions += f.deletions
+    m.churn += f.churn
+    modMap.set(key, m)
+  }
+  const modules = [...modMap.values()].sort(
+    (x, y) => y.churn - x.churn || (x.module < y.module ? -1 : 1),
+  )
+
+  return { files: mapped, modules, total: files.length, additions, deletions, byStatus }
+}
+
+/** A fixed-width unicode bar sized to `total` relative to `max` (filled `█`, padded `░`). Plain
+ *  text so it rides the markdown render path and stays color-blind-safe (length, not colour). */
+function churnBar(total: number, max: number, width = 20): string {
+  if (max <= 0) return '░'.repeat(width)
+  const filled = total > 0 ? Math.max(1, Math.round((total / max) * width)) : 0
+  return '█'.repeat(filled) + '░'.repeat(width - filled)
+}
+
+/** How many top files to list before collapsing the long tail (keeps big PRs readable). */
+const OVERVIEW_FILE_CAP = 20
+
+/** Render the churn overview as a dock-ready markdown report (bars in backticks → monospace).
+ *  Multi-module PRs lead with a per-module rollup (scope), then the per-file detail. */
+export function formatOverviewReport(o: PrOverview): string {
+  if (o.total === 0) return '**PR overview** — no changed files in this PR.'
+  const net = o.additions - o.deletions
+  const netStr = net >= 0 ? `+${net}` : `${net}`
+  const statusLine = Object.entries(o.byStatus)
+    .map(([s, n]) => `${n} ${STATUS_LABEL[s] ?? s}`)
+    .join(' · ')
+  const multiModule = o.modules.length > 1
+  const fileWord = o.total === 1 ? 'file' : 'files'
+  const scope = multiModule
+    ? `**${o.total} ${fileWord} across ${o.modules.length} modules**`
+    : `**${o.total} ${fileWord}**`
+  const head =
+    `**PR overview** — change map (no LLM, from the GitHub file list).\n\n` +
+    `${scope} · +${o.additions} −${o.deletions} · net ${netStr}\n\n` +
+    `${statusLine}`
+
+  const sections: string[] = []
+
+  if (multiModule) {
+    const modMax = o.modules[0]?.churn ?? 0
+    const modList = o.modules
+      .map(
+        (m) =>
+          `- \`${m.module}\` · ${m.files} file${m.files === 1 ? '' : 's'} · ` +
+          `\`+${m.additions} −${m.deletions}\` \`${churnBar(m.churn, modMax)}\``,
+      )
+      .join('\n')
+    sections.push(`**By module**\n\n${modList}`)
+  }
+
+  const fileMax = o.files[0]?.churn ?? 0
+  const shown = o.files.slice(0, OVERVIEW_FILE_CAP)
+  const fileList = shown
+    .map(
+      (f) =>
+        `- \`${f.filename}\` · ${STATUS_LABEL[f.status] ?? f.status} · ` +
+        `\`+${f.additions} −${f.deletions}\` \`${churnBar(f.churn, fileMax)}\``,
+    )
+    .join('\n')
+  const omitted =
+    o.files.length > shown.length
+      ? `\n\n_…and ${o.files.length - shown.length} more changed file(s), smaller churn._`
+      : ''
+  sections.push(`${multiModule ? '**By file**\n\n' : ''}${fileList}${omitted}`)
+
+  return `${head}\n\n${sections.join('\n\n')}`
+}
+
 /** Post a line-anchored review comment on the PR diff. */
 export async function createReviewComment(
   repo: string,

@@ -11,6 +11,7 @@ import {
   type GithubRequest,
   type GithubResult,
   type TestGapsResult,
+  type PrOverviewResult,
 } from '../shared/messages'
 import type { AskRequest } from '../shared/types'
 import { redactSecrets } from '../shared/redact'
@@ -28,6 +29,8 @@ import {
   listPullFiles,
   testGaps,
   formatTestGapsReport,
+  assembleOverview,
+  formatOverviewReport,
 } from './github/api'
 
 console.debug('[YCRA] background service worker loaded')
@@ -255,6 +258,24 @@ chrome.runtime.onMessage.addListener((message: GithubRequest, _sender, sendRespo
           ok: false,
           error: err instanceof Error ? err.message : String(err),
         } satisfies TestGapsResult)
+      }
+    })()
+    return true // keep the channel open for the async sendResponse
+  }
+
+  if (message?.type === 'GH_PR_OVERVIEW') {
+    void (async () => {
+      try {
+        const files = await listPullFiles(message.repo, message.prNumber)
+        sendResponse({
+          ok: true,
+          report: formatOverviewReport(assembleOverview(files)),
+        } satisfies PrOverviewResult)
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        } satisfies PrOverviewResult)
       }
     })()
     return true // keep the channel open for the async sendResponse

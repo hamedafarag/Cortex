@@ -33,6 +33,10 @@ third-party server.
   the author can apply in one click; multi-line selections anchor to the whole range.
 - **Threaded follow-ups** — keep asking about the same code in one conversation; each
   follow-up carries the prior turns. **New thread** clears it.
+- **PR overview** — one click renders a **change map**: files changed, additions/deletions and
+  net per file, with a churn bar so you see where the weight is before reading a line. PRs that
+  span several areas also get a **By module** rollup (grouped by directory) for at-a-glance scope.
+  Fully **deterministic — no AI call, no tokens** (no selection needed).
 - **Summarize the PR** — one click streams a TL;DR + key changes + per-file gloss + a 1–5
   review-effort rating, grounded in the actual diffs (no selection needed).
 - **Review the whole PR** — one click streams a **findings list** grounded in every changed
@@ -123,7 +127,12 @@ options*) and pick an **AI backend**.
    This bakes your absolute `node` and `claude` paths into a wrapper and writes a host
    manifest to each browser's `NativeMessagingHosts/` directory.
 2. **Fully quit and reopen the browser** (native hosts are discovered at startup).
-3. In Options, set **AI backend** to *Claude Code CLI*.
+3. In Options, set **AI backend** to *Claude Code CLI*. This is **opt-in**: selecting it asks for
+   the `nativeMessaging` permission (it's an optional permission, so the default API-key install
+   never requests it). Grant it to enable the CLI backend.
+
+> Installing from the Chrome Web Store? The store assigns its own extension id, so register the
+> host with it: `./native-host/install.sh <store-extension-id>`.
 
 > Note: `claude -p` loads the Claude Code agent environment (~10–17k tokens of base
 > prompt + tool schemas per call, cached after the first), so answers cost ~1–2¢ of
@@ -172,8 +181,9 @@ and revoke the classic one when you're done.
 
 1. Open any GitHub pull request — a **Cortex button** sits at the bottom-right; click it to
    open the dock (the header chevron collapses it back). The **Whole PR** toolbar needs no
-   selection: **Summarize** for an overview, **Review** (with an optional lens) for a tagged
-   findings list, or **Test gaps** for the no-AI test-coverage heuristic.
+   selection: **Overview** for a no-AI change map, **Summarize** for an AI overview, **Review**
+   (with an optional lens) for a tagged findings list, or **Test gaps** for the no-AI
+   test-coverage heuristic.
 2. Highlight code in the diff — the dock's chip shows the captured `file :lines`.
 3. Type a question and click **Ask** (or ⌘/Ctrl+Enter) — or click **Suggest a fix** for a
    committable `suggestion` block on the selected lines. The answer streams in; ask follow-ups

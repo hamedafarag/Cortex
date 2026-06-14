@@ -10,3 +10,6 @@ key.pem
 
 # Native host wrapper — generated per-machine by install.sh (absolute paths)
 native-host/reviewer-host.sh
+
+# Chrome Web Store ZIP artifacts
+web-store/

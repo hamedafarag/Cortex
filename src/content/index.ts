@@ -10,6 +10,8 @@ import {
   type GithubResult,
   type TestGapsMessage,
   type TestGapsResult,
+  type PrOverviewMessage,
+  type PrOverviewResult,
   type OpenHelpMessage,
   type DeleteCommentMessage,
   type SubmitReviewMessage,
@@ -295,6 +297,34 @@ async function onTestGaps(dock: DockPanel): Promise<void> {
   }
 }
 
+/** Deterministic PR change map — no LLM. Asks the background to shape the per-file churn from
+ *  the changed-file list, then renders it as an instant answer turn (rides the same answer path
+ *  as the test-gap check, so follow-ups and the answer→comment bridge keep working). */
+async function onOverview(dock: DockPanel): Promise<void> {
+  const pr = parsePr()
+  if (!pr) {
+    dock.showError('Open a pull request to see its change map.')
+    return
+  }
+  dock.startAnswer('PR overview')
+  const message: PrOverviewMessage = {
+    type: 'GH_PR_OVERVIEW',
+    repo: pr.repo,
+    prNumber: pr.prNumber,
+  }
+  try {
+    const result = (await chrome.runtime.sendMessage(message)) as PrOverviewResult
+    if (result?.ok && result.report) {
+      dock.appendText(result.report)
+      dock.finishAnswer()
+    } else {
+      dock.showError(result?.error ?? 'Could not read the PR file list.')
+    }
+  } catch (err) {
+    dock.showError(err instanceof Error ? err.message : String(err))
+  }
+}
+
 /** Step 1: validate the target and ask the dock to confirm the public write before firing. */
 function postComment(dock: DockPanel, text: string): void {
   const pr = parsePr()
@@ -449,6 +479,7 @@ function buildDock(): DockPanel {
   dock.onSummarize = () => onSummarize(dock)
   dock.onReview = (lensId) => onReview(dock, lensId)
   dock.onTestGaps = () => void onTestGaps(dock)
+  dock.onOverview = () => void onOverview(dock)
   dock.onHelp = () => void chrome.runtime.sendMessage({ type: 'OPEN_HELP' } satisfies OpenHelpMessage)
   dock.onInsertComment = (body) => {
     const inserted = insertComment(body)

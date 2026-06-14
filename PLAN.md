@@ -1,8 +1,9 @@
 # Cortex — Build Plan
 
 Phased, task-level breakdown derived from [DESIGN.md](DESIGN.md).
-Check items off as they land. The session todo list tracks the **active** phases
-(Phase 0 + Phase 1); later phases live here only until we start them.
+Check items off as they land. Phases 0–3 (incl. batch review, Phase 3d) have **shipped**;
+the active frontier is **Phase 4 — Visual review layer** and the **Later** section
+(other platforms & distribution).
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
@@ -183,7 +184,7 @@ Still reviewer-driven, on demand, never autonomous.
   assertions (real key shapes redacted; SHAs/UUIDs/identifiers kept — entropy threshold 4.5 sits in
   the measured gap) + 9 dock-notice assertions + screenshot.*
 
-### Deferred / out of scope (decided, not forgotten)
+### 3d. Batch review ✅
 - [x] **Batch / pending review + review verdict** (Comment / Approve / Request changes) — *graduated
   from deferred once 3a–3c were solid.* **Add to review** accumulates comments into a local
   `DraftComment[]` (a "Pending review · N" panel, persisted per PR), then **Submit review** sends one
@@ -191,9 +192,42 @@ Still reviewer-driven, on demand, never autonomous.
   `body` for Comment/Request-changes (validated client-side). Single **Post to line** is kept alongside
   (GitHub-style both). *Verified: 18 + 14 dock + 3 persistence + 7 Node API assertions; live in Edge
   (submitted + cleaned up a real review on a draft PR).*
+
+### Deferred / out of scope (decided, not forgotten)
 - ~~Mark-as-viewed / file-progress tracking~~ — **skip:** GitHub ships per-file "Viewed" with
   a progress bar natively; reimplementing it fights GitHub's DOM for low marginal value.
 - ~~Autonomous auto-review (bot mode)~~ — **skip:** against Cortex's human-in-the-loop identity.
+
+---
+
+## Phase 4 — Visual review layer (PR at a glance)
+
+Make review more visual and impact-oriented — show the reviewer *where to look* before
+they read a line. Sequenced by cost/risk: deterministic data first (free, no hallucination),
+LLM-generated diagrams last (heaviest dep, weakest grounding from diff-only context). Adjacent
+to [CodeBoarding](https://github.com/CodeBoarding/CodeBoarding) (whole-repo architecture diagrams) —
+prefer *consuming* its `.codeboarding/` output over reproducing whole-repo analysis in a content script.
+
+- [x] **4a. Churn / impact panel** — an **Overview** button (no selection) renders a per-file
+  **change map**: files changed, additions/deletions and **net** per file, each with a unicode
+  **churn bar** scaled to the largest file, plus a status tally (modified/added/deleted/…). A
+  **deterministic, no-LLM** path: `assembleOverview` + `formatOverviewReport` (pure, in
+  `github/api.ts`) shape the `listPullFiles` diffstat the worker already fetches → zero tokens,
+  instant. Mirrors the test-gap pattern (new `GH_PR_OVERVIEW` message → markdown report into the
+  answer area, so follow-ups + the answer→comment bridge still work); long PRs cap at the top 20
+  files by churn with a tail note. *Verified: 18 Node assertions on the pure shaping (sums, sort,
+  net, status tally, bars, empty PR, determinism, cap) + typecheck + build.*
+- [x] **4b. Impact-by-module view** — **folded into Overview** (no second button): a multi-module
+  PR now leads with a **By module** rollup (changed paths grouped by their first up-to-2 directory
+  segments, `(root)` for top-level files), each with file count + churn bar, then the **By file**
+  detail. Path-only, **no LLM**, no repo fetch; single-module PRs render unchanged (no rollup).
+  Pure `moduleKey` + `assembleOverview` extension in `github/api.ts`. *Verified: 23 Node assertions
+  (2-segment grouping, `(root)`, rollup sums, sort, multi- vs single-module rendering, cap) +
+  typecheck + build.*
+- [ ] **4c. (optional) Changed-component diagram** — LLM-emitted **Mermaid** diagram scoped to the
+  components touched by *this PR* (not a whole-repo dep graph), **lazy-loaded** (Mermaid.js is heavy),
+  rendered in the shadow root, **labeled approximate** (diff-only grounding can invent edges). If the
+  repo already ships `.codeboarding/`, render that instead of generating.
 
 ---
 
@@ -203,7 +237,18 @@ Still reviewer-driven, on demand, never autonomous.
 - [ ] GitLab support
 - [ ] Bitbucket support
 - [ ] Review subscription-via-CLI ToS before any public distribution
-- [ ] Packaging / Chrome Web Store listing (API-key provider only; CLI provider as opt-in)
+- [x] Packaging / Chrome Web Store listing (API-key provider only; CLI provider as opt-in) —
+  *engineering done; submission is the user's (outward-facing).* `nativeMessaging` moved to
+  **`optional_permissions`**, requested at runtime from the options page only when the user picks
+  the CLI backend (default install = Anthropic API key, smallest permission surface); the CLI
+  provider + native host degrade cleanly when the permission isn't granted. Added `npm run package`
+  (`scripts/package.mjs` → store-ready `web-store/cortex-<version>.zip`, gitignored), synced
+  `package.json` to v0.1.0, made `install.sh` accept the **store extension id** (the store assigns
+  its own, ≠ the dev id), and wrote **[STORE-LISTING.md](STORE-LISTING.md)** (listing copy,
+  permission justifications, data disclosures, native-host caveat, submission checklist) +
+  **[PRIVACY.md](PRIVACY.md)**. *Left to the user: dev account, 1280×800 screenshots, hosting the
+  privacy policy, and submitting for review. CLI-subscription ToS still to confirm before
+  advertising the CLI backend (see risks).*
 
 ---
 
@@ -211,3 +256,10 @@ Still reviewer-driven, on demand, never autonomous.
 - GitHub diff DOM fragility → prefer GitHub API for ground truth (Phase 2).
 - Fixed extension ID required for native messaging to keep working across reloads.
 - Confirm live Anthropic model IDs/headers at build time — don't hard-code from memory.
+- **CLI-subscription ToS is a distribution blocker, not a checklist item.** If running the
+  user's Claude subscription via the native host isn't permitted for distribution, Provider B
+  can't ship publicly — resolve this *before* investing in packaging (see Later). Provider A
+  (BYO API key) is unaffected.
+- **Testing debt:** no test runner — every feature is verified via throwaway esbuild/Node
+  harnesses. It's held up, but for a tool that does real public writes, consolidating these into
+  a proper runner is the main accruing debt.
