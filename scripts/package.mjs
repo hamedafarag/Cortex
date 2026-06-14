@@ -7,7 +7,7 @@
 // must sit at the archive root, so we zip from inside dist/).
 
 import { execSync } from 'node:child_process'
-import { readFileSync, mkdirSync, rmSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs'
 
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
 const outDir = 'web-store'
@@ -19,6 +19,17 @@ execSync('npm run build', { stdio: 'inherit' })
 if (!existsSync('dist/manifest.json')) {
   console.error('✗ dist/manifest.json not found — build did not produce a valid extension.')
   process.exit(1)
+}
+
+// The Chrome Web Store rejects a `key` field ("key field is not allowed in manifest"): it
+// assigns its own extension id. The dev build keeps `key` for a stable load-unpacked id, so we
+// strip it from the packaged copy only. (Store id ≠ dev id — see STORE-LISTING.md / install.sh.)
+const manifestPath = 'dist/manifest.json'
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+if ('key' in manifest) {
+  delete manifest.key
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
+  console.log('▸ Stripped `key` from the packaged manifest (store assigns its own id).')
 }
 
 mkdirSync(outDir, { recursive: true })
