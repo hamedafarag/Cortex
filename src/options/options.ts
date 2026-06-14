@@ -11,6 +11,7 @@ const apiKeyEl = byId<HTMLInputElement>('apiKey')
 const modelEl = byId<HTMLSelectElement>('model')
 const githubPatEl = byId<HTMLInputElement>('githubPat')
 const apiKeyField = byId<HTMLDivElement>('apiKeyField')
+const cliHintEl = byId<HTMLDivElement>('cliHint')
 const statusEl = byId<HTMLDivElement>('status')
 
 let clearTimer: number | undefined
@@ -20,9 +21,12 @@ function flash(message: string): void {
   clearTimer = window.setTimeout(() => statusEl.replaceChildren(), 1500)
 }
 
-/** Dim the API-key field when it doesn't apply to the chosen backend. */
+/** Reflect the chosen backend in the UI: dim the API-key field when it doesn't apply, and show
+ *  the native-host / repo link only for the Claude Code CLI backend. */
 function syncApiKeyRelevance(): void {
+  const isCli = providerEl.value === 'claude-code-cli'
   apiKeyField.classList.toggle('dimmed', providerEl.value !== 'anthropic-api')
+  cliHintEl.hidden = !isCli
 }
 
 async function save(patch: Partial<Settings>): Promise<void> {
