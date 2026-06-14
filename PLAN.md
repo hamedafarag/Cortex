@@ -237,7 +237,18 @@ prefer *consuming* its `.codeboarding/` output over reproducing whole-repo analy
 - [ ] GitLab support
 - [ ] Bitbucket support
 - [ ] Review subscription-via-CLI ToS before any public distribution
-- [ ] Packaging / Chrome Web Store listing (API-key provider only; CLI provider as opt-in)
+- [x] Packaging / Chrome Web Store listing (API-key provider only; CLI provider as opt-in) —
+  *engineering done; submission is the user's (outward-facing).* `nativeMessaging` moved to
+  **`optional_permissions`**, requested at runtime from the options page only when the user picks
+  the CLI backend (default install = Anthropic API key, smallest permission surface); the CLI
+  provider + native host degrade cleanly when the permission isn't granted. Added `npm run package`
+  (`scripts/package.mjs` → store-ready `web-store/cortex-<version>.zip`, gitignored), synced
+  `package.json` to v0.1.0, made `install.sh` accept the **store extension id** (the store assigns
+  its own, ≠ the dev id), and wrote **[STORE-LISTING.md](STORE-LISTING.md)** (listing copy,
+  permission justifications, data disclosures, native-host caveat, submission checklist) +
+  **[PRIVACY.md](PRIVACY.md)**. *Left to the user: dev account, 1280×800 screenshots, hosting the
+  privacy policy, and submitting for review. CLI-subscription ToS still to confirm before
+  advertising the CLI backend (see risks).*
 
 ---
 

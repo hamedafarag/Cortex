@@ -30,6 +30,24 @@ async function save(patch: Partial<Settings>): Promise<void> {
   flash('Saved')
 }
 
+/** The CLI backend uses native messaging — an opt-in `optional_permissions` entry. Request it
+ *  on selection (this change handler is a user gesture); revert to the API backend if denied. */
+async function onProviderChange(): Promise<void> {
+  const value = providerEl.value as Settings['provider']
+  if (value === 'claude-code-cli') {
+    const granted = await chrome.permissions.request({ permissions: ['nativeMessaging'] })
+    if (!granted) {
+      providerEl.value = 'anthropic-api'
+      syncApiKeyRelevance()
+      await save({ provider: 'anthropic-api' })
+      flash('CLI backend needs the native-messaging permission')
+      return
+    }
+  }
+  syncApiKeyRelevance()
+  await save({ provider: value })
+}
+
 async function init(): Promise<void> {
   byId<HTMLSpanElement>('version').textContent = `v${chrome.runtime.getManifest().version}`
   const settings = await getSettings()
@@ -39,10 +57,7 @@ async function init(): Promise<void> {
   githubPatEl.value = settings.githubPat
   syncApiKeyRelevance()
 
-  providerEl.addEventListener('change', () => {
-    syncApiKeyRelevance()
-    void save({ provider: providerEl.value as Settings['provider'] })
-  })
+  providerEl.addEventListener('change', () => void onProviderChange())
   modelEl.addEventListener('change', () => void save({ model: modelEl.value }))
   // Save secrets on commit (blur/Enter), not per keystroke.
   apiKeyEl.addEventListener('change', () => void save({ anthropicApiKey: apiKeyEl.value.trim() }))

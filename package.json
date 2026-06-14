@@ -1,7 +1,7 @@
 {
   "name": "your-code-review-assistant",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "In-page AI copilot for reviewing GitHub pull requests.",
   "license": "MIT",
@@ -9,7 +9,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "package": "node scripts/package.mjs"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.5.0",

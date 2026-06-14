@@ -95,7 +95,10 @@
             <option value="anthropic-api">Anthropic API (your API key)</option>
             <option value="claude-code-cli">Claude Code CLI (your subscription, via native host)</option>
           </select>
-          <div class="hint">If the selected backend isn't available, the other is used as a fallback.</div>
+          <div class="hint">Default is the Anthropic API (your key). The Claude Code CLI backend is
+            opt-in: choosing it asks for the native-messaging permission and needs the local native host
+            (<code>native-host/install.sh</code>). If the selected backend isn't available, the other is
+            used as a fallback.</div>
         </div>
 
         <div class="field" id="apiKeyField">

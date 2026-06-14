@@ -127,7 +127,12 @@ options*) and pick an **AI backend**.
    This bakes your absolute `node` and `claude` paths into a wrapper and writes a host
    manifest to each browser's `NativeMessagingHosts/` directory.
 2. **Fully quit and reopen the browser** (native hosts are discovered at startup).
-3. In Options, set **AI backend** to *Claude Code CLI*.
+3. In Options, set **AI backend** to *Claude Code CLI*. This is **opt-in**: selecting it asks for
+   the `nativeMessaging` permission (it's an optional permission, so the default API-key install
+   never requests it). Grant it to enable the CLI backend.
+
+> Installing from the Chrome Web Store? The store assigns its own extension id, so register the
+> host with it: `./native-host/install.sh <store-extension-id>`.
 
 > Note: `claude -p` loads the Claude Code agent environment (~10–17k tokens of base
 > prompt + tool schemas per call, cached after the first), so answers cost ~1–2¢ of

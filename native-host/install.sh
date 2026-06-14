@@ -9,7 +9,10 @@
 set -euo pipefail
 
 HOST_NAME="com.ycra.reviewer"
-EXT_ID="cafladkeojdkaaehgajijjehaclhkdch"
+# Extension id to pin in allowed_origins. Defaults to the fixed dev id (load-unpacked /
+# self-build). A store install gets a different, store-assigned id — pass it as the first
+# arg or via YCRA_EXT_ID:  ./install.sh <store-extension-id>
+EXT_ID="${1:-${YCRA_EXT_ID:-cafladkeojdkaaehgajijjehaclhkdch}}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 NODE_BIN="$(command -v node || true)"
