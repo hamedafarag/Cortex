@@ -15,7 +15,13 @@ pluggable: use the **Anthropic API** (your own key) or the **Claude Code CLI** (
 existing Claude subscription, via a local native host) — your code never goes to a
 third-party server.
 
-> Status: **Phases 0 · 1 · 1b · 2 · 2.5 complete; Phase 3 in progress** (GitHub only). See [PLAN.md](PLAN.md) for
+<p align="center">
+  <img src="public/help/ask.png" alt="The Cortex dock on a GitHub PR: a highlighted diff selection, a streamed answer, comment trays, the Whole-PR toolbar, and a composer with Suggest a fix / Ask / Post to line." width="820">
+</p>
+
+> Status: **Phases 0–3 complete** (highlight-and-ask, on-demand review depth, batch review +
+> verdict), **Phase 4a/4b shipped** (deterministic PR overview + by-module rollup), and **packaged
+> for the Chrome Web Store** (API-key default, opt-in CLI). GitHub only. See [PLAN.md](PLAN.md) for
 > the roadmap, [CHANGELOG.md](CHANGELOG.md) for the history, [DESIGN.md](DESIGN.md) for the
 > architecture, and [COMPETITORS.md](COMPETITORS.md) for how this sits in the market.
 
@@ -73,6 +79,36 @@ third-party server.
 - **Persists per PR** — your conversation and the comment you're drafting are remembered for
   each PR and restored when you come back (after a reload or navigating away), stored only in
   your browser.
+
+---
+
+## See it in action
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="public/help/overview.png" alt="A PR overview: a By module rollup and a By file change map, each file with additions, deletions and a churn bar.">
+      <br><b>Overview</b> — a deterministic, no-AI change map: churn per file + a by-module rollup.
+    </td>
+    <td width="50%" valign="top">
+      <img src="public/help/review.png" alt="A whole-PR review: a list of findings, each tagged with a severity chip.">
+      <br><b>Review</b> — whole-PR findings with Blocker / Major / Minor / Nit / Praise chips.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="public/help/suggest.png" alt="A committable GitHub suggestion block generated for the selected lines.">
+      <br><b>Suggest a fix</b> — a one-click committable GitHub <code>suggestion</code> block.
+    </td>
+    <td width="50%" valign="top">
+      <img src="public/help/batch-review.png" alt="A pending-review panel listing several comments, with a verdict picker and a Submit review button.">
+      <br><b>Batch review</b> — accumulate comments, submit with a Comment / Approve / Request-changes verdict.
+    </td>
+  </tr>
+</table>
+
+> More in the in-app features page (the **?** button in the dock), or the screenshots under
+> [`public/help/`](public/help/).
 
 ---
 
@@ -247,12 +283,17 @@ rm ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.ycra.re
 
 ## Roadmap
 
-See [PLAN.md](PLAN.md) and [CHANGELOG.md](CHANGELOG.md). Now in **Phase 3 — from answer to
-action**: making AI output land as real, well-labeled review comments. **Done (Phase 3a):**
-answer→comment bridge, PR-intent grounding, committable `suggestion` blocks, Conventional
-Comments labels, threaded follow-ups. **Done (Phase 3b):** PR summary, whole-PR review with
-severity-tagged findings, specialist lenses, and a test-gap check. **Next:** Phase 3c —
-persistence per PR, confirm/undo before posting, and secret redaction.
+See [PLAN.md](PLAN.md) and [CHANGELOG.md](CHANGELOG.md).
+
+- **Phase 3 — from answer to action** ✅ — answer→comment bridge, PR-intent grounding, committable
+  `suggestion` blocks, Conventional Comments labels, threaded follow-ups (3a); PR summary, whole-PR
+  review with severity-tagged findings, specialist lenses, test-gap check (3b); per-PR persistence,
+  confirm/undo before posting, secret redaction (3c); plus **batch review + verdict**.
+- **Phase 4 — visual review layer** — **4a/4b** ✅ the deterministic **PR Overview** (churn change
+  map + by-module rollup). **4c** (optional LLM Mermaid changed-component diagram) is deferred.
+- **Packaging** ✅ — API-key-default build, opt-in CLI backend, Chrome Web Store listing prep
+  (see [STORE-LISTING.md](STORE-LISTING.md)).
+- **Next** — other platforms (GitLab / Bitbucket behind a DOM abstraction).
 
 ---
 
