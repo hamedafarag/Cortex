@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/marquee.png" alt="Cortex — AI Review Assistant: highlight code in a GitHub pull request to ask, summarize, review, suggest fixes, and post line-anchored comments." width="100%">
+</p>
+
 # Cortex — AI Review Assistant
 
 **A local developer-experience tool that turns the Claude subscription (or API key) you
@@ -14,10 +18,6 @@ Highlight code in the diff, ask a question, and get a streamed, markdown-rendere
 pluggable: use the **Anthropic API** (your own key) or the **Claude Code CLI** (your
 existing Claude subscription, via a local native host) — your code never goes to a
 third-party server.
-
-<p align="center">
-  <img src="public/help/ask.png" alt="The Cortex dock on a GitHub PR: a highlighted diff selection, a streamed answer, comment trays, the Whole-PR toolbar, and a composer with Suggest a fix / Ask / Post to line." width="820">
-</p>
 
 > Status: **Phases 0–3 complete** (highlight-and-ask, on-demand review depth, batch review +
 > verdict), **Phase 4a/4b shipped** (deterministic PR overview + by-module rollup), and **packaged
@@ -145,6 +145,15 @@ keeps matching). After a rebuild, click **↻** on the extension card to reload 
 Open the extension's **Options** page (`edge://extensions` → details → *Extension
 options*) and pick an **AI backend**.
 
+> **Which backend — and who needs the native host?**
+> - **Anthropic API (Option A)** is all you need for a normal install, including from the Chrome
+>   Web Store: paste your key and go — **no scripts, no native host.** This is the right choice for
+>   most people.
+> - **Claude Code CLI (Option B)** runs on your Claude *subscription* instead of an API key, but it
+>   needs a small **local native host** that an extension store **cannot install for you**. So it's
+>   only available if you **build from source** (this repo) and run `install.sh` — a store-only
+>   install can't use it. It's effectively a developer / self-builder option.
+
 ### Option A — Anthropic API
 
 1. Set **AI backend** to *Anthropic API*.
@@ -167,8 +176,10 @@ options*) and pick an **AI backend**.
    the `nativeMessaging` permission (it's an optional permission, so the default API-key install
    never requests it). Grant it to enable the CLI backend.
 
-> Installing from the Chrome Web Store? The store assigns its own extension id, so register the
-> host with it: `./native-host/install.sh <store-extension-id>`.
+> Using the CLI backend against an extension you **installed from the Chrome Web Store** (rather
+> than load-unpacked)? You still need this repo for the native host, and the store assigns its own
+> extension id — so register the host with that id:
+> `./native-host/install.sh <store-extension-id>`. (Load-unpacked dev builds use the no-arg form.)
 
 > Note: `claude -p` loads the Claude Code agent environment (~10–17k tokens of base
 > prompt + tool schemas per call, cached after the first), so answers cost ~1–2¢ of
