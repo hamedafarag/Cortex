@@ -136,6 +136,14 @@ export interface TestGapsMessage {
   prNumber: number
 }
 
+/** content -> background: build the deterministic per-file churn map for the PR. No LLM —
+ *  pure diffstat shaping in the background (which holds the cached file list). */
+export interface PrOverviewMessage {
+  type: 'GH_PR_OVERVIEW'
+  repo: string
+  prNumber: number
+}
+
 /** content -> background: delete a review comment (the post-then-Undo window). */
 export interface DeleteCommentMessage {
   type: 'GH_DELETE_COMMENT'
@@ -166,6 +174,7 @@ export type GithubRequest =
   | DeleteCommentMessage
   | SubmitReviewMessage
   | TestGapsMessage
+  | PrOverviewMessage
   | OpenHelpMessage
 
 /** background -> content: result of a GitHub operation. */
@@ -180,6 +189,14 @@ export interface GithubResult {
 
 /** background -> content: the rendered test-gap report (markdown), or an error. */
 export interface TestGapsResult {
+  ok: boolean
+  /** Markdown report, on success. */
+  report?: string
+  error?: string
+}
+
+/** background -> content: the rendered PR change-map report (markdown), or an error. */
+export interface PrOverviewResult {
   ok: boolean
   /** Markdown report, on success. */
   report?: string

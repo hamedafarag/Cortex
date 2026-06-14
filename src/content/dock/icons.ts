@@ -27,6 +27,7 @@ export type IconName =
   | 'shield'
   | 'x'
   | 'listPlus'
+  | 'barChart'
 
 const PATHS: Record<IconName, string> = {
   // A small synapse / node cluster — the Cortex mark.
@@ -83,6 +84,8 @@ const PATHS: Record<IconName, string> = {
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
   // List with a plus — "add this comment to the pending review".
   listPlus: '<path d="M11 6H3M16 12H3M11 18H3"/><path d="M18 9v6M21 12h-6"/>',
+  // Bar chart — "PR change map / churn overview".
+  barChart: '<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-9"/>',
 }
 
 export function icon(name: IconName, size = 16): string {

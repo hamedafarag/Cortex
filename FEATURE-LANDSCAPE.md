@@ -12,7 +12,7 @@ feature-by-feature *why*.
 
 ## How to read this
 
-- **Status** — ✅ have · 🟡 planned (Phase 3) · ⬜ gap
+- **Status** — ✅ have · 🟡 planned (Phase 4) · ⬜ gap
 - **E / I** — Effort / Impact (L/M/H), scoped to *adding it to an in-page extension that
   already has a GitHub REST client + two streaming LLM providers*.
 
@@ -75,15 +75,23 @@ threaded follow-ups (all built on existing primitives).
 | Feature | Exemplar tools | Status | E/I |
 |---|---|---|---|
 | AI PR summary / TL;DR (whole-PR walkthrough) | CodeRabbit, Copilot, Qodo `/describe`, Graphite, What The Diff | ✅ | M / High |
-| Per-file changes table (blast-radius map) | CodeRabbit, Qodo `/describe` | ⬜ | M / M |
+| Per-file change map / churn (blast-radius) | CodeRabbit, Qodo `/describe`, GitHub diffstat | 🟡 | L / M |
+| Module / dependency impact diagram | CodeBoarding, Graphite | 🟡 | M / M |
 | Estimated review-effort score (1–5) | CodeRabbit, Qodo | ✅ | L / M |
 | PR title/body/commit context injection | CodeRabbit, Qodo, Greptile, Korbit | ✅ | L / High |
 
 - **AI PR summary** — "Summarize PR" button: fetch all file patches (`listPullFiles`),
   concatenate with budgeting for big PRs, stream a summary into the answer area. No new
   permission or wire protocol. Feed PR title/body in too to ground the "why".
-- **Per-file changes table** — a clickable file list with a one-line AI gloss per file;
-  clicking scrolls GitHub to that file. Cheap once the summary exists — same work item.
+- **Per-file change map / churn (Phase 4a)** — a **deterministic, no-LLM** "PR at a glance":
+  files changed + additions/deletions/Δ per file, rendered as a churn bar so the reviewer sees
+  *where the weight is* before reading a line. The data is already fetched (`listPullFiles`
+  returns `additions`/`deletions`/`status`); zero tokens, no new dependency. Ship first.
+- **Module / dependency impact diagram (Phase 4b/c)** — group changed paths by directory/module
+  (path-only, no LLM); optionally an LLM-emitted **Mermaid** diagram of the *changed components*
+  (lazy-loaded, labeled approximate — diff-only grounding can invent edges). Adjacent to
+  [CodeBoarding](https://github.com/CodeBoarding/CodeBoarding) (whole-repo architecture diagrams):
+  prefer *consuming* its `.codeboarding/` output over reproducing whole-repo analysis in-browser.
 - **Review-effort score** — bundle into the summary prompt; render a 1–5 badge (icon+label,
   color-blind-safe). Near-zero marginal cost.
 - **PR context injection** — the cheapest high-leverage fix in the catalog. `GET /pulls/{n}`

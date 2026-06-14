@@ -356,6 +356,7 @@ const TEMPLATE = `
       </div>
       <div class="pr-actions">
         <span class="pr-label">${icon('list', 13)} Whole PR</span>
+        <button type="button" class="btn sm overview" title="PR change map — files changed and churn per file (no LLM, no selection needed)">${icon('barChart', 14)} Overview</button>
         <button type="button" class="btn sm summarize" title="Summarize the whole PR (no selection needed)">${icon('list', 14)} Summarize</button>
         <span class="group">
           <select class="lens" title="Review lens — scope the review to one dimension"></select>
@@ -402,6 +403,7 @@ export class DockPanel {
   onSummarize: (() => void) | null = null
   onReview: ((lensId: string) => void) | null = null
   onTestGaps: (() => void) | null = null
+  onOverview: (() => void) | null = null
   onInsertComment: ((body: string) => void) | null = null
   onApplyLabel: ((label: ConventionalLabel, decoration: string) => void) | null = null
   onPost: ((text: string) => void) | null = null
@@ -424,6 +426,7 @@ export class DockPanel {
   private readonly summarizeBtn: HTMLButtonElement
   private readonly reviewBtn: HTMLButtonElement
   private readonly testGapsBtn: HTMLButtonElement
+  private readonly overviewBtn: HTMLButtonElement
   private readonly lensSelect: HTMLSelectElement
   private readonly postBtn: HTMLButtonElement
   private readonly addReviewBtn: HTMLButtonElement
@@ -470,6 +473,7 @@ export class DockPanel {
     this.summarizeBtn = this.root.querySelector('.btn.summarize')!
     this.reviewBtn = this.root.querySelector('.btn.review')!
     this.testGapsBtn = this.root.querySelector('.btn.testgaps')!
+    this.overviewBtn = this.root.querySelector('.btn.overview')!
     this.lensSelect = this.root.querySelector('select.lens')!
     this.postBtn = this.root.querySelector('.btn.post')!
     this.addReviewBtn = this.root.querySelector('.btn.addreview')!
@@ -508,6 +512,9 @@ export class DockPanel {
     })
     this.testGapsBtn.addEventListener('click', () => {
       if (!this.streaming) this.onTestGaps?.()
+    })
+    this.overviewBtn.addEventListener('click', () => {
+      if (!this.streaming) this.onOverview?.()
     })
     this.postBtn.addEventListener('click', () => {
       const text = this.inputEl.value.trim()
@@ -649,6 +656,7 @@ export class DockPanel {
     this.summarizeBtn.disabled = disabled
     this.reviewBtn.disabled = disabled
     this.testGapsBtn.disabled = disabled
+    this.overviewBtn.disabled = disabled
     this.lensSelect.disabled = disabled
   }
 

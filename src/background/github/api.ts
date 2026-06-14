@@ -305,6 +305,95 @@ export function formatTestGapsReport(gaps: TestGaps): string {
   )
 }
 
+// --- PR change map / churn overview (path + diffstat; no LLM) -------------------
+
+/** Short, human label for a GitHub file `status`. */
+const STATUS_LABEL: Record<string, string> = {
+  added: 'added',
+  removed: 'deleted',
+  modified: 'modified',
+  renamed: 'renamed',
+  copied: 'copied',
+  changed: 'changed',
+}
+
+export interface OverviewFile {
+  filename: string
+  status: string
+  additions: number
+  deletions: number
+  /** additions + deletions — the file's total churn. */
+  churn: number
+}
+
+export interface PrOverview {
+  /** Changed files, sorted by churn (largest first). */
+  files: OverviewFile[]
+  total: number
+  additions: number
+  deletions: number
+  /** How many files of each status (e.g. `{ modified: 3, added: 2 }`). */
+  byStatus: Record<string, number>
+}
+
+/** Build a deterministic per-file churn map from the PR's file list. Pure, so the shaping is
+ *  unit-testable. No LLM — just the additions/deletions GitHub already returns per file. */
+export function assembleOverview(files: PullFile[]): PrOverview {
+  let additions = 0
+  let deletions = 0
+  const byStatus: Record<string, number> = {}
+  const mapped: OverviewFile[] = files.map((f) => {
+    const a = f.additions ?? 0
+    const d = f.deletions ?? 0
+    additions += a
+    deletions += d
+    byStatus[f.status] = (byStatus[f.status] ?? 0) + 1
+    return { filename: f.filename, status: f.status, additions: a, deletions: d, churn: a + d }
+  })
+  // Largest churn first; stable tiebreak on path so the output is deterministic.
+  mapped.sort((x, y) => y.churn - x.churn || (x.filename < y.filename ? -1 : 1))
+  return { files: mapped, total: files.length, additions, deletions, byStatus }
+}
+
+/** A fixed-width unicode bar sized to `total` relative to `max` (filled `█`, padded `░`). Plain
+ *  text so it rides the markdown render path and stays color-blind-safe (length, not colour). */
+function churnBar(total: number, max: number, width = 20): string {
+  if (max <= 0) return '░'.repeat(width)
+  const filled = total > 0 ? Math.max(1, Math.round((total / max) * width)) : 0
+  return '█'.repeat(filled) + '░'.repeat(width - filled)
+}
+
+/** How many top files to list before collapsing the long tail (keeps big PRs readable). */
+const OVERVIEW_FILE_CAP = 20
+
+/** Render the churn overview as a dock-ready markdown report (bars in backticks → monospace). */
+export function formatOverviewReport(o: PrOverview): string {
+  if (o.total === 0) return '**PR overview** — no changed files in this PR.'
+  const net = o.additions - o.deletions
+  const netStr = net >= 0 ? `+${net}` : `${net}`
+  const statusLine = Object.entries(o.byStatus)
+    .map(([s, n]) => `${n} ${STATUS_LABEL[s] ?? s}`)
+    .join(' · ')
+  const head =
+    `**PR overview** — change map by file (no LLM, from the GitHub file list).\n\n` +
+    `**${o.total} file${o.total === 1 ? '' : 's'}** · +${o.additions} −${o.deletions} · net ${netStr}\n\n` +
+    `${statusLine}`
+  const max = o.files[0]?.churn ?? 0
+  const shown = o.files.slice(0, OVERVIEW_FILE_CAP)
+  const list = shown
+    .map(
+      (f) =>
+        `- \`${f.filename}\` · ${STATUS_LABEL[f.status] ?? f.status} · ` +
+        `\`+${f.additions} −${f.deletions}\` \`${churnBar(f.churn, max)}\``,
+    )
+    .join('\n')
+  const omitted =
+    o.files.length > shown.length
+      ? `\n\n_…and ${o.files.length - shown.length} more changed file(s), smaller churn._`
+      : ''
+  return `${head}\n\n${list}${omitted}`
+}
+
 /** Post a line-anchored review comment on the PR diff. */
 export async function createReviewComment(
   repo: string,
