@@ -13,3 +13,9 @@ native-host/reviewer-host.sh
 
 # Chrome Web Store ZIP artifacts
 web-store/
+
+# Claude Code local settings (machine-specific permissions)
+.claude/settings.local.json
+
+# Vitest coverage output
+coverage/

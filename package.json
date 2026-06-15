@@ -1,7 +1,7 @@
 {
   "name": "your-code-review-assistant",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "In-page AI copilot for reviewing GitHub pull requests.",
   "license": "MIT",
@@ -9,6 +9,9 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cov": "vitest run --coverage",
     "icons": "node scripts/gen-icons.mjs",
     "package": "node scripts/package.mjs"
   },
@@ -16,8 +19,11 @@
     "@crxjs/vite-plugin": "^2.5.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/chrome": "^0.1.43",
+    "@vitest/coverage-v8": "^2.1.9",
+    "jsdom": "^25.0.1",
     "typescript": "^6.0.3",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^2.1.9"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
