@@ -91,6 +91,11 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   over GitHub's content, the dock now starts as a small Cortex button (bottom-right). Click it
   to expand the **full-width** dock; collapse back to the button when done. Fixes the expanded
   dock hiding the comment box / page content behind it.
+- **Native host allows the store id by default** — now that the extension is published, its
+  fixed Chrome Web Store id is baked into `install.sh` alongside the load-unpacked id, so the
+  host's `allowed_origins` covers both. Store users just run `./native-host/install.sh` with no
+  argument; the positional arg / `YCRA_EXT_ID` now adds an *extra* origin rather than replacing
+  the default.
 
 ### Fixed
 - **Composer was bound to the wrong textarea** — `DockPanel` selected its input with a bare

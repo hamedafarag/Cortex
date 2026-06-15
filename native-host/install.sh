@@ -9,10 +9,14 @@
 set -euo pipefail
 
 HOST_NAME="com.ycra.reviewer"
-# Extension id to pin in allowed_origins. Defaults to the fixed dev id (load-unpacked /
-# self-build). A store install gets a different, store-assigned id — pass it as the first
-# arg or via YCRA_EXT_ID:  ./install.sh <store-extension-id>
-EXT_ID="${1:-${YCRA_EXT_ID:-cafladkeojdkaaehgajijjehaclhkdch}}"
+# Extension ids allowed to talk to the host. Both are known + fixed, so they're allowed by
+# default and neither dev nor store users need to pass anything:
+#   - DEV_EXT_ID   — load-unpacked / self-build id (from the repo's fixed manifest key)
+#   - STORE_EXT_ID — Chrome Web Store id (assigned to the published listing; same for every install)
+# Pass an *additional* id as the first arg or via YCRA_EXT_ID to allow another origin too.
+DEV_EXT_ID="cafladkeojdkaaehgajijjehaclhkdch"
+STORE_EXT_ID="hlfjhmhgkpibcjpflejijbcbpapinifj"
+EXTRA_EXT_ID="${1:-${YCRA_EXT_ID:-}}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 NODE_BIN="$(command -v node || true)"
@@ -29,13 +33,17 @@ exec "$NODE_BIN" "$DIR/reviewer-host.mjs"
 EOF
 chmod +x "$WRAPPER"
 
+# Allow both known ids by default; append the optional extra id if one was given.
+ORIGINS="\"chrome-extension://$DEV_EXT_ID/\", \"chrome-extension://$STORE_EXT_ID/\""
+[ -n "$EXTRA_EXT_ID" ] && ORIGINS="$ORIGINS, \"chrome-extension://$EXTRA_EXT_ID/\""
+
 read -r -d '' MANIFEST <<EOF || true
 {
   "name": "$HOST_NAME",
   "description": "Your Code Review Assistant native host",
   "path": "$WRAPPER",
   "type": "stdio",
-  "allowed_origins": ["chrome-extension://$EXT_ID/"]
+  "allowed_origins": [$ORIGINS]
 }
 EOF
 
@@ -51,8 +59,9 @@ install_to() {
 }
 
 echo "Installing native host '$HOST_NAME' …"
-echo "  node:   $NODE_BIN"
-echo "  claude: $CLAUDE_BIN"
+echo "  node:    $NODE_BIN"
+echo "  claude:  $CLAUDE_BIN"
+echo "  ext ids: $DEV_EXT_ID (dev), $STORE_EXT_ID (store)${EXTRA_EXT_ID:+, $EXTRA_EXT_ID (extra)}"
 
 case "$(uname -s)" in
   Darwin)
