@@ -18,8 +18,11 @@ a native-messaging host). No third-party SaaS. GitHub-only.
   server stops** — prefer `build` for testing.
 - `npm run typecheck` — `tsc --noEmit`. Run after changes.
 - `npm run icons` — regenerate PNG icons from `public/icons/icon.svg`.
-- No test runner yet. Verify logic with throwaway esbuild + Node harnesses (stub `chrome.*`
-  / `fetch`), and verify behaviour in-browser.
+- `npm test` — **Vitest** (`jsdom` env, globals on). Co-located `*.test.ts`; shared in-memory
+  `chrome.*` stub + helpers in `test/setup.ts` (reset before each test). `test:watch`,
+  `test:cov`. ~656 tests across all 14 modules — run after changes. Test files are excluded
+  from the `tsc` build. Still verify DOM cross-world / GitHub-DOM behaviour **in-browser** —
+  jsdom can't model the isolated-world quirks.
 
 ## Architecture (where things live)
 

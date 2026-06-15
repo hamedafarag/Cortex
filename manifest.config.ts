@@ -12,7 +12,7 @@ export default defineManifest({
   manifest_version: 3,
   key: KEY,
   name: 'Cortex — AI Review Assistant',
-  version: '0.1.0',
+  version: '0.1.1',
   description:
     'In-page AI copilot for reviewing GitHub pull requests — on your own Claude ' +
     'subscription or API key. No SaaS middleman.',

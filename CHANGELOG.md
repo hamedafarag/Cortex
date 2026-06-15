@@ -72,6 +72,12 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   with a **By module** rollup (changed paths grouped by directory) before the per-file detail, so
   scope reads top-down. Built entirely on the file list Cortex already fetches (zero tokens), and
   rides the same answer path as the test-gap check. (Phase 4a/4b)
+- **Regression test suite** — the project's first automated tests: **Vitest + jsdom** with an
+  in-memory `chrome.*` stub (`test/setup.ts`). **656 tests across all 14 modules** — redaction,
+  prompt building, persistence, settings, diff-selection parsing, the dock wiring (including a
+  guard that the composer stays bound to the Ask textarea), canned comments, the GitHub API +
+  test-gap heuristic, the provider registry, both providers, and the background routers. Run
+  with `npm test` (`test:watch`, `test:cov`).
 
 ### Changed
 - **CLI backend is now opt-in** — `nativeMessaging` moved from a required permission to
@@ -85,6 +91,24 @@ manifest version; format loosely follows [Keep a Changelog](https://keepachangel
   over GitHub's content, the dock now starts as a small Cortex button (bottom-right). Click it
   to expand the **full-width** dock; collapse back to the button when done. Fixes the expanded
   dock hiding the comment box / page content behind it.
+
+### Fixed
+- **Composer was bound to the wrong textarea** — `DockPanel` selected its input with a bare
+  `querySelector('textarea')`, which matched the batch-review **summary** box (added above the
+  composer in the DOM) instead of the Ask composer. Every `submit()` read an empty string and
+  silently bailed, breaking **Ask, Post to line, Add to review, Cmd/Ctrl+Enter, "Use as
+  comment", and per-PR draft save/restore** at once. Now scoped to `.composer textarea`, with a
+  regression test that fails if it ever drifts again.
+- **Empty `data-line-number` resolved to line 0** — on added/deleted diff rows the absent side
+  carries an empty `data-line-number`; `Number('')` is `0`, so a selection touching such a row
+  anchored a review at `start_line: 0` (rejected/mis-anchored by the Reviews API). Now rejects
+  non-positive / non-integer line numbers.
+- **Secret redaction missed quoted JSON/YAML keys** — `"api-key": "…"` (the canonical config
+  secret shape) slipped through unmasked while the unquoted form was caught. The assignment
+  matcher now allows an optional closing quote after the keyword.
+- **Redaction count was not idempotent** — re-redacting already-masked text re-counted the
+  `[REDACTED]` placeholder, inflating the "masked N secrets" figure shown to the reviewer. A
+  no-op pass now reports 0.
 
 ## [0.1.0] — 2026-06-11
 
