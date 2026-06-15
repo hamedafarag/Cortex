@@ -21,7 +21,7 @@ const PATTERNS: RegExp[] = [
 
 /** `secret = "value"` / `token: "value"` style — mask just the value, keep the key + quotes. */
 const ASSIGNMENT =
-  /(\b(?:passwd|password|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|bearer)\b\s*[:=]\s*['"`])([^'"`\n]{6,})(['"`])/gi
+  /(\b(?:passwd|password|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|auth[_-]?token|bearer)\b['"`]?\s*[:=]\s*['"`])([^'"`\n]{6,})(['"`])/gi
 
 /** A standalone long token; the entropy + charset checks below decide if it's secret-like. */
 const TOKEN = /\b[A-Za-z0-9+/_=-]{32,}\b/g
@@ -64,7 +64,8 @@ export function redactSecrets(text: string): Redaction {
       return PLACEHOLDER
     })
   }
-  out = out.replace(ASSIGNMENT, (_m, key: string, _val: string, quote: string) => {
+  out = out.replace(ASSIGNMENT, (m, key: string, val: string, quote: string) => {
+    if (val === PLACEHOLDER) return m // already masked — keep the count idempotent
     count++
     return `${key}${PLACEHOLDER}${quote}`
   })

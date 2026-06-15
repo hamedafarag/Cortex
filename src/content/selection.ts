@@ -58,8 +58,10 @@ interface LineInfo {
 
 function lineInfoOf(cell: Element | undefined | null): LineInfo | undefined {
   if (!cell) return undefined
+  // GitHub leaves data-line-number present-but-empty on the absent side of added/deleted
+  // rows; Number('') is 0, which is a finite-but-invalid line — reject it (1-based, integer).
   const n = Number(cell.getAttribute('data-line-number'))
-  if (!Number.isFinite(n)) return undefined
+  if (!Number.isInteger(n) || n <= 0) return undefined
   // Missing data-diff-side is treated as the right (new) side — the common case.
   const side: DiffSide =
     cell.getAttribute('data-diff-side')?.toLowerCase() === 'left' ? 'LEFT' : 'RIGHT'
