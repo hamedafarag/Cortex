@@ -467,7 +467,7 @@ export class DockPanel {
     this.redactionEl = this.root.querySelector('.redaction-notice')!
     this.chipEl = this.root.querySelector('.chip')!
     this.chipLabel = this.root.querySelector('.chip .label')!
-    this.inputEl = this.root.querySelector('textarea')!
+    this.inputEl = this.root.querySelector('.composer textarea')!
     this.askBtn = this.root.querySelector('.btn.ask')!
     this.suggestBtn = this.root.querySelector('.btn.suggest')!
     this.summarizeBtn = this.root.querySelector('.btn.summarize')!
