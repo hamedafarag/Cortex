@@ -2,6 +2,12 @@
   <img src="assets/marquee.png" alt="Cortex — AI Review Assistant: highlight code in a GitHub pull request to ask, summarize, review, suggest fixes, and post line-anchored comments." width="100%">
 </p>
 
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/cortex-%E2%80%94-ai-review-assist/hlfjhmhgkpibcjpflejijbcbpapinifj">
+    <img src="https://img.shields.io/chrome-web-store/v/hlfjhmhgkpibcjpflejijbcbpapinifj?label=Chrome%20Web%20Store&color=4285F4&logo=googlechrome&logoColor=white" alt="Available in the Chrome Web Store">
+  </a>
+</p>
+
 # Cortex — AI Review Assistant
 
 **A local developer-experience tool that turns the Claude subscription (or API key) you
@@ -20,8 +26,9 @@ existing Claude subscription, via a local native host) — your code never goes 
 third-party server.
 
 > Status: **Phases 0–3 complete** (highlight-and-ask, on-demand review depth, batch review +
-> verdict), **Phase 4a/4b shipped** (deterministic PR overview + by-module rollup), and **packaged
-> for the Chrome Web Store** (API-key default, opt-in CLI). GitHub only. See [PLAN.md](PLAN.md) for
+> verdict), **Phase 4a/4b shipped** (deterministic PR overview + by-module rollup), and **[live on
+> the Chrome Web Store](https://chromewebstore.google.com/detail/cortex-%E2%80%94-ai-review-assist/hlfjhmhgkpibcjpflejijbcbpapinifj)**
+> (API-key default, opt-in CLI). GitHub only. See [PLAN.md](PLAN.md) for
 > the roadmap, [CHANGELOG.md](CHANGELOG.md) for the history, [DESIGN.md](DESIGN.md) for the
 > architecture, and [COMPETITORS.md](COMPETITORS.md) for how this sits in the market.
 
@@ -120,6 +127,14 @@ third-party server.
   installed and signed in (`claude` on your `PATH`)
 
 ---
+
+## Install
+
+**From the Chrome Web Store (recommended):**
+[**Cortex — AI Review Assistant**](https://chromewebstore.google.com/detail/cortex-%E2%80%94-ai-review-assist/hlfjhmhgkpibcjpflejijbcbpapinifj)
+→ *Add to your browser*. Works in **Microsoft Edge**, Chrome, Brave, and other Chromium
+browsers, and auto-updates. The store build defaults to the **Anthropic API key** backend; the
+**Claude Code CLI** backend is opt-in (see below). To build from source instead, load it unpacked:
 
 ## Build & load the extension
 
