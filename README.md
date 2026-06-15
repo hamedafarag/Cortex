@@ -192,9 +192,9 @@ options*) and pick an **AI backend**.
    never requests it). Grant it to enable the CLI backend.
 
 > Using the CLI backend against an extension you **installed from the Chrome Web Store** (rather
-> than load-unpacked)? You still need this repo for the native host, and the store assigns its own
-> extension id — so register the host with that id:
-> `./native-host/install.sh <store-extension-id>`. (Load-unpacked dev builds use the no-arg form.)
+> than load-unpacked)? You still need this repo for the native host, but the plain no-arg
+> `./native-host/install.sh` **already allows both the store and the load-unpacked ids** — nothing
+> extra to pass. (To allow an additional custom id, pass it as an arg or set `YCRA_EXT_ID`.)
 
 > Note: `claude -p` loads the Claude Code agent environment (~10–17k tokens of base
 > prompt + tool schemas per call, cached after the first), so answers cost ~1–2¢ of
